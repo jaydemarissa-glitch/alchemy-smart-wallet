@@ -20,7 +20,7 @@ test.describe('API Health and Monitoring', () => {
     expect(chains.length).toBeGreaterThan(0);
     
     // Check for required chain properties
-    chains.forEach(chain => {
+    chains.forEach((chain: any) => {
       expect(chain.id).toBeDefined();
       expect(chain.name).toBeDefined();
       expect(chain.rpcUrl).toBeDefined();

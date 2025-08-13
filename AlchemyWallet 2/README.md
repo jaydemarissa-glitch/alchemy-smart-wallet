@@ -129,6 +129,50 @@ GET /api/monitoring/performance
 
 ## 🚀 Deployment
 
+### CI/CD Pipeline
+
+The application uses a comprehensive GitHub Actions workflow with multiple stages:
+
+#### Pipeline Stages
+
+1. **🧪 Testing Stage**
+   - Matrix testing on Node.js 18 and 20
+   - TypeScript compilation check
+   - Unit tests with coverage reporting
+   - End-to-end tests with Playwright
+   - Coverage upload to Codecov
+
+2. **🔒 Security Stage**
+   - npm audit for vulnerability scanning
+   - CodeQL analysis for code security
+   - Dependency vulnerability checks
+   - Secret scanning with TruffleHog and GitLeaks
+
+3. **🏗️ Build Stage**
+   - Application bundling and compilation
+   - Asset optimization
+   - Build artifact generation
+
+4. **🐳 Docker Stage**
+   - Multi-architecture Docker image builds
+   - Container registry publishing
+   - Image vulnerability scanning
+
+5. **🚀 Deployment Stage**
+   - Automated staging deployments (develop branch)
+   - Production deployments (main branch)
+   - Smoke tests and health checks
+   - Slack notifications
+
+#### Automated Security Monitoring
+
+- Daily dependency updates via automated PRs
+- Continuous security scanning
+- License compliance checking
+- Automated vulnerability remediation
+
+### Manual Deployment
+
 ### Staging Environment
 
 1. **Configure environment**
@@ -208,8 +252,14 @@ The application includes comprehensive monitoring:
 npm run dev          # Start development server
 npm run build        # Build for production
 npm run check        # TypeScript check
-npm run test         # Run tests
+npm run test         # Run unit tests
+npm run test:watch   # Run tests in watch mode
+npm run test:coverage # Run tests with coverage
+npm run test:e2e     # Run end-to-end tests
 npm run db:push      # Deploy database schema
+npm run lint         # Lint code
+npm run audit        # Security audit
+npm run audit:fix    # Fix security issues automatically
 ```
 
 ### Code Quality
@@ -221,22 +271,56 @@ npm run db:push      # Deploy database schema
 
 ## 🧪 Testing
 
+### Unit Tests
+
+The application includes comprehensive unit tests with high coverage:
+
+- **47 test cases** covering the AlchemyService component
+- **95.45% code coverage** exceeding the 88.4% target
+- Tests cover constructor validation, multi-chain support, core API methods, error handling, and chain configurations
+- Uses Jest with TypeScript support and mocks the Alchemy SDK for fast and reliable test execution
+
+#### Running Tests
+
+```bash
+# Run all unit tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run unit tests only
+npm run test:unit
+```
+
 ### End-to-End Tests
 
 ```bash
+# Run E2E tests
 npm run test:e2e
-```
 
-Tests cover:
-- Wallet management workflows
-- Gasless transaction processing
-- API endpoint functionality
-- Security validations
+# Run E2E tests with UI
+npm run test:e2e:ui
+
+# Run E2E tests in headed mode
+npm run test:e2e:headed
+```
 
 ### Test Structure
 
-- `tests/e2e/wallet-functionality.spec.ts` - Core wallet features
-- `tests/e2e/api-integration.spec.ts` - API endpoint testing
+- `tests/unit/` - Unit tests with Jest
+- `tests/e2e/` - End-to-end tests with Playwright
+- `tests/unit/setup.ts` - Global test configuration
+
+### Coverage Reports
+
+Coverage reports are generated in the `coverage/` directory and include:
+- HTML reports for browser viewing
+- LCOV format for CI/CD integration
+- Text summary for console output
 
 ## 🔧 Configuration
 

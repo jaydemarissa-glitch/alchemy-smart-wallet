@@ -1,0 +1,300 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job 1: Testing
+  test:
+    name: 🧪 Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'AlchemyWallet 2/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd "AlchemyWallet 2"
+          npm ci
+
+      - name: 🔍 Type check
+        run: |
+          cd "AlchemyWallet 2"
+          npm run check
+
+      - name: 🧪 Run unit tests
+        run: |
+          cd "AlchemyWallet 2"
+          npm run test:coverage
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+
+      - name: 📊 Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./AlchemyWallet 2/coverage
+          flags: unittests
+          name: codecov-umbrella
+
+      - name: 🎭 Install Playwright
+        run: |
+          cd "AlchemyWallet 2"
+          npx playwright install --with-deps
+
+      - name: 🎭 Run E2E tests
+        run: |
+          cd "AlchemyWallet 2"
+          npm run test:e2e
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: 📤 Upload test results
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: test-results-${{ matrix.node-version }}
+          path: |
+            AlchemyWallet 2/coverage/
+            AlchemyWallet 2/test-results/
+          retention-days: 7
+
+  # Job 2: Security Audit
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AlchemyWallet 2/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd "AlchemyWallet 2"
+          npm ci
+
+      - name: 🔍 npm audit
+        run: |
+          cd "AlchemyWallet 2"
+          npm audit --audit-level moderate
+
+      - name: 🔒 CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: typescript, javascript
+
+      - name: 🛡️ Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'alchemy-smart-wallet'
+          path: './AlchemyWallet 2'
+          format: 'ALL'
+
+      - name: 📤 Upload dependency check results
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-check-report
+          path: reports/
+          retention-days: 7
+
+  # Job 3: Build
+  build:
+    name: 🏗️ Build Application
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AlchemyWallet 2/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd "AlchemyWallet 2"
+          npm ci
+
+      - name: 🏗️ Build application
+        run: |
+          cd "AlchemyWallet 2"
+          npm run build
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            AlchemyWallet 2/dist/
+            AlchemyWallet 2/client/dist/
+          retention-days: 7
+
+  # Job 4: Docker Build
+  docker-build:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔑 Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📝 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🏗️ Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./AlchemyWallet 2
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 5: Deploy to Staging
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to staging
+        id: deploy
+        run: |
+          cd "AlchemyWallet 2"
+          # Simulate staging deployment
+          echo "Deploying to staging environment..."
+          echo "url=https://staging.alchemy-wallet.example.com" >> $GITHUB_OUTPUT
+
+      - name: 🧪 Run staging smoke tests
+        run: |
+          # Add staging smoke tests here
+          echo "Running staging smoke tests..."
+          curl -f https://staging.alchemy-wallet.example.com/api/health || exit 1
+
+  # Job 6: Deploy to Production
+  deploy-production:
+    name: 🌟 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🌟 Deploy to production
+        id: deploy
+        run: |
+          cd "AlchemyWallet 2"
+          # Simulate production deployment
+          echo "Deploying to production environment..."
+          echo "url=https://alchemy-wallet.example.com" >> $GITHUB_OUTPUT
+
+      - name: 🧪 Run production smoke tests
+        run: |
+          # Add production smoke tests here
+          echo "Running production smoke tests..."
+          curl -f https://alchemy-wallet.example.com/api/health || exit 1
+
+      - name: 📢 Notify deployment success
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: '🎉 Production deployment successful!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: success()
+
+      - name: 📢 Notify deployment failure
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: '❌ Production deployment failed!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  # Job 7: Performance Monitoring
+  monitor:
+    name: 📊 Performance Monitoring
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📊 Run performance tests
+        run: |
+          echo "Running performance monitoring..."
+          # Add performance monitoring logic here
+
+      - name: 📈 Update monitoring dashboard
+        run: |
+          echo "Updating Grafana dashboards..."
+          # Add dashboard update logic here

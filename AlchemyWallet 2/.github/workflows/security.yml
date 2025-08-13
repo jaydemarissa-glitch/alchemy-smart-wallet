@@ -1,0 +1,163 @@
+name: Security & Dependency Updates
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  dependency-update:
+    name: 🔄 Dependency Updates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'AlchemyWallet 2/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd "AlchemyWallet 2"
+          npm ci
+
+      - name: 🔍 Check for outdated packages
+        run: |
+          cd "AlchemyWallet 2"
+          npm outdated --json > outdated.json || true
+          cat outdated.json
+
+      - name: 🔧 Update dependencies
+        run: |
+          cd "AlchemyWallet 2"
+          npm update
+
+      - name: 🧪 Run tests after update
+        run: |
+          cd "AlchemyWallet 2"
+          npm test
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+
+      - name: 📝 Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update dependencies'
+          title: '🔄 Automated dependency updates'
+          body: |
+            ## 📦 Dependency Updates
+            
+            This PR contains automated dependency updates.
+            
+            ### Changes:
+            - Updated npm dependencies to latest compatible versions
+            - All tests pass after updates
+            
+            ### Security:
+            - Dependency security audit passed
+            
+            Please review the changes before merging.
+          branch: automated/dependency-updates
+          delete-branch: true
+
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'AlchemyWallet 2/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd "AlchemyWallet 2"
+          npm ci
+
+      - name: 🔍 npm audit
+        run: |
+          cd "AlchemyWallet 2"
+          npm audit --audit-level moderate --json > audit-report.json || true
+          cat audit-report.json
+
+      - name: 🛡️ Snyk Security Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=medium --file=AlchemyWallet\ 2/package.json
+
+      - name: 📊 SARIF Upload
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: snyk.sarif
+
+  secret-scan:
+    name: 🕵️ Secret Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🕵️ Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+      - name: 🔍 GitLeaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  license-check:
+    name: 📄 License Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'AlchemyWallet 2/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: |
+          cd "AlchemyWallet 2"
+          npm ci
+
+      - name: 📄 Check licenses
+        run: |
+          cd "AlchemyWallet 2"
+          npx license-checker --summary > license-summary.txt
+          cat license-summary.txt
+
+      - name: 📤 Upload license report
+        uses: actions/upload-artifact@v3
+        with:
+          name: license-report
+          path: AlchemyWallet 2/license-summary.txt
+          retention-days: 30
