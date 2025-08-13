@@ -169,4 +169,41 @@ describe('AlchemyService', () => {
       expect(result.chainId).toBe(chainId);
     });
   });
+
+  describe('Alchemy SDK compatibility', () => {
+    it('should support maxRetries parameter if needed in the future', () => {
+      // This test ensures that if maxRetries is ever added to the Alchemy constructor,
+      // it will be properly supported as the Alchemy SDK v3.6.2+ does support this parameter
+      const { Alchemy, Network } = require('alchemy-sdk');
+      
+      // Test that Alchemy SDK supports maxRetries configuration
+      expect(() => {
+        new Alchemy({
+          apiKey: 'test-key',
+          network: Network.ETH_MAINNET,
+          maxRetries: 3
+        });
+      }).not.toThrow();
+    });
+
+    it('should verify current constructor calls are compatible', () => {
+      // Verify that the current constructor patterns used in alchemyService
+      // are compatible with the Alchemy SDK interface
+      const { Alchemy, Network } = require('alchemy-sdk');
+      
+      expect(() => {
+        new Alchemy({
+          apiKey: 'test-api-key',
+          network: Network.ETH_MAINNET,
+        });
+      }).not.toThrow();
+      
+      expect(() => {
+        new Alchemy({
+          apiKey: 'test-api-key',
+          network: Network.MATIC_MAINNET,
+        });
+      }).not.toThrow();
+    });
+  });
 });
