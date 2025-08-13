@@ -165,4 +165,5 @@ class AlchemyService {
   }
 }
 
+export { AlchemyService };
 export const alchemyService = new AlchemyService();
