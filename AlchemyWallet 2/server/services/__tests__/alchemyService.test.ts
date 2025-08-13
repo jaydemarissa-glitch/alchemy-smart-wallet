@@ -1,10 +1,13 @@
 import { Network } from 'alchemy-sdk';
-import { alchemyService, SUPPORTED_CHAINS } from '../alchemyService';
+import { createAlchemyService, AlchemyService, SUPPORTED_CHAINS } from '../alchemyService';
 
 describe('AlchemyService', () => {
+  let alchemyService: AlchemyService;
+  
   beforeEach(() => {
     // Clear any cached clients
     jest.clearAllMocks();
+    alchemyService = createAlchemyService();
   });
 
   describe('SUPPORTED_CHAINS configuration', () => {
@@ -167,6 +170,33 @@ describe('AlchemyService', () => {
       expect(result.hash).toBeDefined();
       expect(result.sponsored).toBe(true);
       expect(result.chainId).toBe(chainId);
+    });
+  });
+
+  describe('createAlchemyService factory function', () => {
+    it('should return an AlchemyService instance', () => {
+      const service = createAlchemyService();
+      expect(service).toBeInstanceOf(AlchemyService);
+    });
+
+    it('should return the same instance when called multiple times (memoization)', () => {
+      const service1 = createAlchemyService();
+      const service2 = createAlchemyService();
+      expect(service1).toBe(service2);
+    });
+
+    it('should have all expected methods', () => {
+      const service = createAlchemyService();
+      expect(typeof service.getClient).toBe('function');
+      expect(typeof service.getRpcUrl).toBe('function');
+      expect(typeof service.getTokenBalances).toBe('function');
+      expect(typeof service.getTokenMetadata).toBe('function');
+      expect(typeof service.getTransaction).toBe('function');
+      expect(typeof service.getTransactionReceipt).toBe('function');
+      expect(typeof service.getGasPrice).toBe('function');
+      expect(typeof service.getNativeBalance).toBe('function');
+      expect(typeof service.checkGasSponsorship).toBe('function');
+      expect(typeof service.sponsorTransaction).toBe('function');
     });
   });
 });

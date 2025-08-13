@@ -1,5 +1,6 @@
 import { Alchemy, Network } from 'alchemy-sdk';
 import { providerService } from './providerService';
+import memoizee from 'memoizee';
 
 // Chain configurations
 export const SUPPORTED_CHAINS = {
@@ -12,7 +13,7 @@ export const SUPPORTED_CHAINS = {
 
 export type SupportedChainId = keyof typeof SUPPORTED_CHAINS;
 
-class AlchemyService {
+export class AlchemyService {
   private clients: Map<number, Alchemy> = new Map();
   private apiKey: string;
 
@@ -132,4 +133,8 @@ class AlchemyService {
   }
 }
 
-export const alchemyService = new AlchemyService();
+// Memoized factory function for creating AlchemyService instances
+export const createAlchemyService = memoizee(() => new AlchemyService(), {
+  maxAge: 60000, // Cache for 1 minute
+  max: 1 // Only cache one instance
+});

@@ -5,7 +5,7 @@
  * including Solana, Cosmos, and other networks.
  */
 
-import { alchemyService } from './alchemyService';
+import { createAlchemyService } from './alchemyService';
 import { monitoringService } from './monitoringService';
 
 // Network types
@@ -391,8 +391,8 @@ class EVMAdapter implements NetworkAdapter {
     const chainId = 1; // Default to Ethereum for this example
     
     try {
-      const nativeBalance = await alchemyService.getNativeBalance(address, chainId);
-      const tokenBalances = await alchemyService.getTokenBalances(address, chainId);
+      const nativeBalance = await createAlchemyService().getNativeBalance(address, chainId);
+      const tokenBalances = await createAlchemyService().getTokenBalances(address, chainId);
 
       const tokens = tokenBalances.tokenBalances.map((token: any) => ({
         address: token.contractAddress,
@@ -418,8 +418,8 @@ class EVMAdapter implements NetworkAdapter {
   async getTransaction(hash: string): Promise<UnifiedTransaction | null> {
     try {
       const chainId = 1; // Default to Ethereum
-      const tx = await alchemyService.getTransaction(hash, chainId);
-      const receipt = await alchemyService.getTransactionReceipt(hash, chainId);
+      const tx = await createAlchemyService().getTransaction(hash, chainId);
+      const receipt = await createAlchemyService().getTransactionReceipt(hash, chainId);
 
       if (!tx) return null;
 
@@ -449,7 +449,7 @@ class EVMAdapter implements NetworkAdapter {
   async estimateFees(transaction: any): Promise<{ fee: string; gasLimit?: string }> {
     try {
       const chainId = 1; // Default to Ethereum
-      const gasPrice = await alchemyService.getGasPrice(chainId);
+      const gasPrice = await createAlchemyService().getGasPrice(chainId);
       const gasLimit = '21000'; // Standard transfer
 
       const fee = (BigInt(gasPrice.toString()) * BigInt(gasLimit)).toString();
@@ -466,7 +466,7 @@ class EVMAdapter implements NetworkAdapter {
 
   async isNetworkHealthy(): Promise<boolean> {
     try {
-      await alchemyService.getGasPrice(1); // Test with Ethereum
+      await createAlchemyService().getGasPrice(1); // Test with Ethereum
       return true;
     } catch (error) {
       return false;

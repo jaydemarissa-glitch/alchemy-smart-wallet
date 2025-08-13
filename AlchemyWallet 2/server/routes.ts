@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { alchemyService, SUPPORTED_CHAINS } from "./services/alchemyService";
+import { createAlchemyService, SUPPORTED_CHAINS } from "./services/alchemyService";
 import { gaslessCashService } from "./services/gaslessCashService";
 import { monitoringService } from "./services/monitoringService";
 import { securityService } from "./services/securityService";
@@ -204,10 +204,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const wallet of wallets) {
         try {
           // Get native balance
-          const nativeBalance = await alchemyService.getNativeBalance(wallet.address, wallet.chainId);
+          const nativeBalance = await createAlchemyService().getNativeBalance(wallet.address, wallet.chainId);
           
           // Get token balances
-          const tokenBalances = await alchemyService.getTokenBalances(wallet.address, wallet.chainId);
+          const tokenBalances = await createAlchemyService().getTokenBalances(wallet.address, wallet.chainId);
           
           // Process and update balances in database
           // This would involve more complex logic to handle token metadata, pricing, etc.
@@ -458,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const chains = Object.entries(SUPPORTED_CHAINS).map(([id, config]) => ({
       id: parseInt(id),
       name: config.name,
-      rpcUrl: alchemyService.getRpcUrl(parseInt(id)),
+      rpcUrl: createAlchemyService().getRpcUrl(parseInt(id)),
     }));
     
     res.json(chains);
