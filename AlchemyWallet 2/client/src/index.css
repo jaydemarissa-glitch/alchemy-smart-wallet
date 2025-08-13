@@ -1,0 +1,261 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(210 25% 7.8431%);
+  --card: hsl(180 6.6667% 97.0588%);
+  --card-foreground: hsl(210 25% 7.8431%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(210 25% 7.8431%);
+  --primary: hsl(217 91% 60%);
+  --primary-dark: hsl(224 76% 48%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(261 73% 66%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 1.9608% 90%);
+  --muted-foreground: hsl(210 25% 7.8431%);
+  --accent: hsl(157 69% 38%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(356 90% 54%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(201 30% 91%);
+  --input: hsl(200 23% 97%);
+  --ring: hsl(217 91% 60%);
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(48 96% 89%);
+  --error: hsl(0 84% 60%);
+  --error-foreground: hsl(0 0% 100%);
+  --success: hsl(142 76% 36%);
+  --success-foreground: hsl(0 0% 100%);
+  --chart-1: hsl(217 91% 60%);
+  --chart-2: hsl(157 69% 38%);
+  --chart-3: hsl(38 92% 50%);
+  --chart-4: hsl(142 76% 36%);
+  --chart-5: hsl(336 76% 68%);
+  --sidebar: hsl(180 6.6667% 97.0588%);
+  --sidebar-foreground: hsl(210 25% 7.8431%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(211 51% 92%);
+  --sidebar-accent-foreground: hsl(217 91% 60%);
+  --sidebar-border: hsl(205 25% 91%);
+  --sidebar-ring: hsl(217 91% 60%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'JetBrains Mono', Menlo, monospace;
+  --radius: 1.3rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 1px 2px -1px hsl(217 91% 60% / 0.05);
+  --shadow: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 1px 2px -1px hsl(217 91% 60% / 0.05);
+  --shadow-md: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 2px 4px -1px hsl(217 91% 60% / 0.05);
+  --shadow-lg: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 4px 6px -1px hsl(217 91% 60% / 0.05);
+  --shadow-xl: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 8px 10px -1px hsl(217 91% 60% / 0.05);
+  --shadow-2xl: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --background: hsl(0 0% 0%);
+  --foreground: hsl(200 6.6667% 91.1765%);
+  --card: hsl(228 9.8039% 10%);
+  --card-foreground: hsl(0 0% 85.0980%);
+  --popover: hsl(0 0% 0%);
+  --popover-foreground: hsl(200 6.6667% 91.1765%);
+  --primary: hsl(217 91% 60%);
+  --primary-dark: hsl(224 76% 48%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(261 73% 66%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(0 0% 9.4118%);
+  --muted-foreground: hsl(210 3.3898% 46.2745%);
+  --accent: hsl(157 69% 38%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(356 90% 54%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(210 5.2632% 14.9020%);
+  --input: hsl(207 27% 18%);
+  --ring: hsl(217 91% 60%);
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(48 96% 89%);
+  --error: hsl(0 84% 60%);
+  --error-foreground: hsl(0 0% 100%);
+  --success: hsl(142 76% 36%);
+  --success-foreground: hsl(0 0% 100%);
+  --chart-1: hsl(217 91% 60%);
+  --chart-2: hsl(157 69% 38%);
+  --chart-3: hsl(38 92% 50%);
+  --chart-4: hsl(142 76% 36%);
+  --chart-5: hsl(336 76% 68%);
+  --sidebar: hsl(228 9.8039% 10%);
+  --sidebar-foreground: hsl(0 0% 85.0980%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(205 70% 8%);
+  --sidebar-accent-foreground: hsl(217 91% 60%);
+  --sidebar-border: hsl(206 16% 26%);
+  --sidebar-ring: hsl(217 91% 60%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'JetBrains Mono', Menlo, monospace;
+  --radius: 1.3rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 1px 2px -1px hsl(217 91% 60% / 0.05);
+  --shadow: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 1px 2px -1px hsl(217 91% 60% / 0.05);
+  --shadow-md: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 2px 4px -1px hsl(217 91% 60% / 0.05);
+  --shadow-lg: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 4px 6px -1px hsl(217 91% 60% / 0.05);
+  --shadow-xl: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 8px 10px -1px hsl(217 91% 60% / 0.05);
+  --shadow-2xl: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  html {
+    font-family: var(--font-sans);
+  }
+}
+
+/* Custom crypto wallet styles */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, hsl(142 76% 36%) 100%);
+}
+
+.wallet-card {
+  @apply bg-white dark:bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow;
+}
+
+.chain-badge {
+  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+}
+
+.chain-badge--ethereum {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+.chain-badge--bsc {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+}
+
+.chain-badge--polygon {
+  @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200;
+}
+
+.chain-badge--base {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+.chain-badge--arbitrum {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+.transaction-status--pending {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+}
+
+.transaction-status--confirmed {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.transaction-status--failed {
+  @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+}
+
+.gasless-badge {
+  @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200;
+}
+
+/* Glassmorphism effects for premium feel */
+.glass-card {
+  @apply backdrop-blur-md bg-white/80 dark:bg-gray-900/80;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Enhanced loading animations */
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    opacity: 1; 
+    box-shadow: 0 0 0 0 rgba(var(--primary), 0.7);
+  }
+  50% { 
+    opacity: 0.8; 
+    box-shadow: 0 0 0 10px rgba(var(--primary), 0);
+  }
+}
+
+/* Smooth gradient animations for cards */
+.animate-gradient {
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Enhanced focus styles for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Custom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full hover:bg-gray-400;
+}
+
+/* Typography enhancements */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Enhanced button styles */
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white focus-ring;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 hover:bg-gray-300 text-gray-900 focus-ring;
+}
+
+.btn-accent {
+  @apply bg-green-600 hover:bg-green-700 text-white focus-ring;
+}
+
+.btn-gasless {
+  @apply bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white focus-ring;
+}
