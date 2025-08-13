@@ -394,8 +394,6 @@ class EVMAdapter implements NetworkAdapter {
       const service = createAlchemyService();
       const nativeBalance = await service.getNativeBalance(address, chainId);
       const tokenBalances = await service.getTokenBalances(address, chainId);
-      const nativeBalance = await alchemyService.getNativeBalance(address, chainId);
-      const tokenBalances = await alchemyService.getTokenBalances(address, chainId);
 
       const tokens = tokenBalances.tokenBalances.map((token: any) => ({
         address: token.contractAddress,
@@ -418,14 +416,11 @@ class EVMAdapter implements NetworkAdapter {
     }
   }
 
-  async getTransaction(hash: string): Promise<UnifiedTransaction | null> {
+  async getTransaction(hash: string, chainId: number = 1): Promise<UnifiedTransaction | null> {
     try {
       const service = createAlchemyService();
       const tx = await service.getTransaction(hash, chainId);
       const receipt = await service.getTransactionReceipt(hash, chainId);
-      const alchemyService = createAlchemyService();
-      const tx = await alchemyService.getTransaction(hash, chainId);
-      const receipt = await alchemyService.getTransactionReceipt(hash, chainId);
 
       if (!tx) return null;
 
