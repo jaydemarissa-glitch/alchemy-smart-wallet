@@ -55,7 +55,7 @@ jobs:
       uses: marocchino/sticky-pull-request-comment@v2
       with:
         recreate: true
-        path: ./AlchemyWallet 2/coverage/lcov-report/index.html
+        path: ./AlchemyWallet 2/coverage/coverage-summary.txt
     - name: Generate coverage summary markdown
       run: |
         cd "AlchemyWallet 2"
