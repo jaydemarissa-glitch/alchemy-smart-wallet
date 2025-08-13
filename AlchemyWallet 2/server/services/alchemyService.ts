@@ -136,5 +136,5 @@ export class AlchemyService {
 // Memoized factory function for creating AlchemyService instances
 export const createAlchemyService = memoizee(() => new AlchemyService(), {
   maxAge: 60000, // Cache for 1 minute
-  max: 1 // Only cache one instance
+  maxAge: 60000 // Cache for 1 minute
 });
