@@ -630,7 +630,8 @@ class AlchemyService {
 const createAlchemyService = memoize(
   (config?: AlchemyServiceConfig) => new AlchemyService(config),
   { primitive: true }
-);
+// Service factory function
+const createAlchemyService = (config?: AlchemyServiceConfig) => new AlchemyService(config);
 
 export const alchemyService = createAlchemyService();
 export { AlchemyService };
