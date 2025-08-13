@@ -634,4 +634,4 @@ const createAlchemyService = memoize(
 const createAlchemyService = (config?: AlchemyServiceConfig) => new AlchemyService(config);
 
 export const alchemyService = createAlchemyService();
-export { AlchemyService };
+export { createAlchemyService, AlchemyService };
