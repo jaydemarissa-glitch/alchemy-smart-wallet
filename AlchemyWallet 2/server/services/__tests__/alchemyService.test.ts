@@ -498,7 +498,7 @@ describe('AlchemyService', () => {
         sponsored: true,
         chainId: 1,
       });
-      expect(result.hash).toMatch(/^0x[a-f0-9]+$/); // Verify it's a valid hash format (relaxed regex)
+      expect(result.hash).toMatch(/^0x[a-f0-9]{64}$/); // Verify it's a valid Ethereum transaction hash
     });
 
     it('should log transaction details', async () => {
