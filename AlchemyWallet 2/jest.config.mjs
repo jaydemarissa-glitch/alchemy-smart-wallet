@@ -30,4 +30,8 @@ export default {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  // Improve Jest exit behavior
+  forceExit: true,
+  detectOpenHandles: true,
+  testTimeout: 10000,
 };

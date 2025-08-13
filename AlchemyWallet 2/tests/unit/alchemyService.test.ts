@@ -8,6 +8,7 @@ import {
   SUPPORTED_CHAINS,
   type AlchemyServiceConfig 
 } from '../../server/services/alchemyService';
+import { alchemyService as globalService } from '../../server/services/alchemyService';
 
 // Mock the Alchemy SDK
 jest.mock('alchemy-sdk', () => ({
@@ -37,12 +38,14 @@ jest.mock('memoizee', () => jest.fn((fn) => fn));
 describe('AlchemyService', () => {
   let alchemyService: AlchemyService;
   let mockAlchemyInstance: any;
+  let createdInstances: AlchemyService[] = []; // Track all instances
 
   const originalEnv = process.env;
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = { ...originalEnv, ALCHEMY_API_KEY: 'test-api-key' };
+    createdInstances = []; // Reset instances array
     
     // Get the mocked Alchemy constructor
     const { Alchemy } = require('alchemy-sdk');
@@ -64,37 +67,63 @@ describe('AlchemyService', () => {
 
   afterEach(() => {
     process.env = originalEnv;
+    
+    // Clean up all created instances
     if (alchemyService) {
       alchemyService.cleanup();
     }
+    createdInstances.forEach(instance => {
+      try {
+        instance.cleanup();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    });
+    createdInstances = [];
   });
+
+  afterAll(() => {
+    // Clean up the global service instance
+    globalService.cleanup();
+    
+    // Force cleanup any remaining timers and async operations
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  // Helper function to create and track instances
+  const createTrackedService = (config?: AlchemyServiceConfig) => {
+    const service = new AlchemyService(config);
+    createdInstances.push(service);
+    return service;
+  };
 
   describe('Constructor', () => {
     it('should create instance with API key from environment', () => {
-      expect(() => new AlchemyService()).not.toThrow();
+      expect(() => createTrackedService()).not.toThrow();
     });
 
     it('should create instance with API key from config', () => {
       const config: AlchemyServiceConfig = { apiKey: 'custom-api-key' };
-      expect(() => new AlchemyService(config)).not.toThrow();
+      expect(() => createTrackedService(config)).not.toThrow();
     });
 
     it('should throw InvalidApiKeyError when no API key is provided', () => {
       delete process.env.ALCHEMY_API_KEY;
       delete process.env.VITE_ALCHEMY_API_KEY;
       
-      expect(() => new AlchemyService()).toThrow(InvalidApiKeyError);
+      expect(() => createTrackedService()).toThrow(InvalidApiKeyError);
     });
 
     it('should use VITE_ALCHEMY_API_KEY as fallback', () => {
       delete process.env.ALCHEMY_API_KEY;
       process.env.VITE_ALCHEMY_API_KEY = 'vite-api-key';
       
-      expect(() => new AlchemyService()).not.toThrow();
+      expect(() => createTrackedService()).not.toThrow();
     });
 
     it('should initialize with default configuration', () => {
-      alchemyService = new AlchemyService();
+      alchemyService = createTrackedService();
       const stats = alchemyService.getStats();
       
       expect(stats.config.maxRetries).toBe(3);
@@ -111,7 +140,7 @@ describe('AlchemyService', () => {
         enableRequestLogging: true,
       };
       
-      alchemyService = new AlchemyService(config);
+      alchemyService = createTrackedService(config);
       const stats = alchemyService.getStats();
       
       expect(stats.config.maxRetries).toBe(5);
