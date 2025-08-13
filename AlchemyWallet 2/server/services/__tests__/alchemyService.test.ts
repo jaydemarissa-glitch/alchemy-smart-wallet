@@ -49,7 +49,8 @@ describe('AlchemyService', () => {
       
       // Import the AlchemyService class directly
       const module = await import('../alchemyService');
-      const service = new module.AlchemyService();
+      // Use the cached AlchemyService module
+      const service = new AlchemyServiceModule.AlchemyService();
       
       expect(service).toBeDefined();
       expect(MockedAlchemy).toHaveBeenCalledWith({
