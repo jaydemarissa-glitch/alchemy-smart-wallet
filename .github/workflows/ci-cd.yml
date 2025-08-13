@@ -50,17 +50,22 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Generate coverage summary markdown
+    - name: Generate coverage summary for PR
+      if: github.event_name == 'pull_request'
       run: |
         cd "AlchemyWallet 2"
-        npx jest --coverage --silent | grep -E "^(Statements|Branches|Functions|Lines)" > coverage/coverage-summary.md || echo "Coverage summary not available" > coverage/coverage-summary.md
+        echo "## Test Coverage Report" > coverage-summary.md
+        echo "" >> coverage-summary.md
+        echo "\`\`\`" >> coverage-summary.md
+        npx jest --coverage --silent --passWithNoTests 2>/dev/null | grep -E "(All files|File|Statements|Branches|Functions|Lines)" | head -20 >> coverage-summary.md || echo "Coverage data not available" >> coverage-summary.md
+        echo "\`\`\`" >> coverage-summary.md
 
     - name: Comment PR with coverage
       if: github.event_name == 'pull_request'
       uses: marocchino/sticky-pull-request-comment@v2
       with:
         recreate: true
-        path: ./AlchemyWallet 2/coverage/coverage-summary.md
+        path: ./AlchemyWallet 2/coverage-summary.md
   security:
     runs-on: ubuntu-latest
     steps:

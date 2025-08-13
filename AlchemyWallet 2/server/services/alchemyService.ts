@@ -11,7 +11,7 @@ export const SUPPORTED_CHAINS = {
 
 export type SupportedChainId = keyof typeof SUPPORTED_CHAINS;
 
-class AlchemyService {
+export class AlchemyService {
   private clients: Map<number, Alchemy> = new Map();
   private apiKey: string;
 
@@ -139,8 +139,7 @@ class AlchemyService {
     }
   }
 
-  // Gas Manager / Sponsorship methods would be implemented here
-  // These would integrate with Alchemy's Gas Manager API
+  // Gas Manager / Sponsorship methods
   async checkGasSponsorship(userId: string, chainId: number, estimatedGas: string) {
     // TODO: Implement actual Gas Manager API integration
     // For now, return mock sponsorship status
@@ -153,16 +152,23 @@ class AlchemyService {
 
   async sponsorTransaction(transactionData: any, userId: string, chainId: number) {
     // TODO: Implement actual transaction sponsorship
-    // This would use Alchemy's Smart Wallet SDK for gasless transactions
-    console.log('Sponsoring transaction:', { transactionData, userId, chainId });
+    // For now, return mock transaction result
+    console.log(`Sponsoring transaction for user ${userId} on chain ${chainId}:`, transactionData);
     
-    // Mock implementation
     return {
       hash: '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join(''),
       sponsored: true,
       chainId,
     };
   }
+}
+
+/**
+ * Factory function to create a new instance of AlchemyService
+ * Useful for testing or when you need isolated instances
+ */
+export function createAlchemyService(): AlchemyService {
+  return new AlchemyService();
 }
 
 export { AlchemyService };

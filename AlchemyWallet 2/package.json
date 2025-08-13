@@ -12,7 +12,15 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --coverage --ci --watchAll=false"
+    "test:ci": "jest --coverage --ci --watchAll=false",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "staging:up": "docker-compose -f docker-compose.staging.yml up -d",
+    "staging:down": "docker-compose -f docker-compose.staging.yml down",
+    "staging:logs": "docker-compose -f docker-compose.staging.yml logs -f",
+    "staging:build": "docker build -t alchemy-wallet:staging .",
+    "monitoring:setup": "mkdir -p monitoring/grafana/dashboards monitoring/grafana/datasources && echo 'Monitoring directories created'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -86,6 +94,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.0.5",
+    "@playwright/test": "^1.54.2",
     "@replit/vite-plugin-cartographer": "^0.2.8",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
@@ -105,6 +114,7 @@
     "drizzle-kit": "^0.30.4",
     "esbuild": "^0.25.0",
     "jest": "^30.0.5",
+    "playwright": "^1.54.2",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.1",

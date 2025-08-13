@@ -66,6 +66,8 @@ interface GasPolicyData {
   monthlyLimit: number;
   monthlyUsed: number;
   perTransactionLimit?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function useWallet() {

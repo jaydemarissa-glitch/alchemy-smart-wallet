@@ -1,0 +1,4 @@
+# CI/CD Pipeline Configuration
+
+# Updated path for coverage report
+coverage_report_path: './AlchemyWallet 2/coverage/coverage-summary.txt'
