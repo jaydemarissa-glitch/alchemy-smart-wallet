@@ -230,7 +230,7 @@ jobs:
         run: |
           # Add staging smoke tests here
           echo "Running staging smoke tests..."
-          curl -f https://staging.alchemy-wallet.example.com/api/health || exit 1
+          curl -f "${{ steps.deploy.outputs.url }}/api/health" || exit 1
 
   # Job 6: Deploy to Production
   deploy-production:
