@@ -1,4 +1,5 @@
 import { Alchemy, Network } from 'alchemy-sdk';
+import { providerService } from './providerService';
 
 // Chain configurations
 export const SUPPORTED_CHAINS = {
@@ -19,7 +20,7 @@ class AlchemyService {
     this.apiKey = process.env.ALCHEMY_API_KEY || process.env.VITE_ALCHEMY_API_KEY || '';
     
     if (!this.apiKey) {
-      throw new Error('ALCHEMY_API_KEY is required');
+      console.warn('ALCHEMY_API_KEY not found, relying on multi-provider service');
     }
     
     this.initializeClients();
@@ -27,7 +28,7 @@ class AlchemyService {
 
   private initializeClients() {
     Object.entries(SUPPORTED_CHAINS).forEach(([chainId, config]) => {
-      if (config.network) {
+      if (config.network && this.apiKey) {
         const alchemy = new Alchemy({
           apiKey: this.apiKey,
           network: config.network,
@@ -37,8 +38,16 @@ class AlchemyService {
     });
   }
 
-  getClient(chainId: number): Alchemy | null {
-    return this.clients.get(chainId) || null;
+  async getClient(chainId: number): Promise<Alchemy | null> {
+    // First try local client
+    const localClient = this.clients.get(chainId);
+    if (localClient) {
+      return localClient;
+    }
+
+    // Fallback to provider service with multiple providers
+    const clientWithFallback = await providerService.getClientWithFallback(chainId);
+    return clientWithFallback?.client || null;
   }
 
   getRpcUrl(chainId: number): string {
@@ -50,93 +59,51 @@ class AlchemyService {
   }
 
   async getTokenBalances(address: string, chainId: number) {
-    const client = this.getClient(chainId);
-    if (!client) {
-      throw new Error(`No Alchemy client available for chain ${chainId}`);
-    }
-
-    try {
-      const balances = await client.core.getTokenBalances(address);
-      return balances;
-    } catch (error) {
-      console.error(`Error fetching token balances for ${address} on chain ${chainId}:`, error);
-      throw error;
-    }
+    return await providerService.executeWithFallback(
+      chainId,
+      async (client) => await client.core.getTokenBalances(address),
+      `getTokenBalances(${address}, ${chainId})`
+    );
   }
 
   async getTokenMetadata(contractAddress: string, chainId: number) {
-    const client = this.getClient(chainId);
-    if (!client) {
-      throw new Error(`No Alchemy client available for chain ${chainId}`);
-    }
-
-    try {
-      const metadata = await client.core.getTokenMetadata(contractAddress);
-      return metadata;
-    } catch (error) {
-      console.error(`Error fetching token metadata for ${contractAddress} on chain ${chainId}:`, error);
-      throw error;
-    }
+    return await providerService.executeWithFallback(
+      chainId,
+      async (client) => await client.core.getTokenMetadata(contractAddress),
+      `getTokenMetadata(${contractAddress}, ${chainId})`
+    );
   }
 
   async getTransaction(hash: string, chainId: number) {
-    const client = this.getClient(chainId);
-    if (!client) {
-      throw new Error(`No Alchemy client available for chain ${chainId}`);
-    }
-
-    try {
-      const tx = await client.core.getTransaction(hash);
-      return tx;
-    } catch (error) {
-      console.error(`Error fetching transaction ${hash} on chain ${chainId}:`, error);
-      throw error;
-    }
+    return await providerService.executeWithFallback(
+      chainId,
+      async (client) => await client.core.getTransaction(hash),
+      `getTransaction(${hash}, ${chainId})`
+    );
   }
 
   async getTransactionReceipt(hash: string, chainId: number) {
-    const client = this.getClient(chainId);
-    if (!client) {
-      throw new Error(`No Alchemy client available for chain ${chainId}`);
-    }
-
-    try {
-      const receipt = await client.core.getTransactionReceipt(hash);
-      return receipt;
-    } catch (error) {
-      console.error(`Error fetching transaction receipt ${hash} on chain ${chainId}:`, error);
-      throw error;
-    }
+    return await providerService.executeWithFallback(
+      chainId,
+      async (client) => await client.core.getTransactionReceipt(hash),
+      `getTransactionReceipt(${hash}, ${chainId})`
+    );
   }
 
   async getGasPrice(chainId: number) {
-    const client = this.getClient(chainId);
-    if (!client) {
-      throw new Error(`No Alchemy client available for chain ${chainId}`);
-    }
-
-    try {
-      const gasPrice = await client.core.getGasPrice();
-      return gasPrice;
-    } catch (error) {
-      console.error(`Error fetching gas price for chain ${chainId}:`, error);
-      throw error;
-    }
+    return await providerService.executeWithFallback(
+      chainId,
+      async (client) => await client.core.getGasPrice(),
+      `getGasPrice(${chainId})`
+    );
   }
 
   async getNativeBalance(address: string, chainId: number) {
-    const client = this.getClient(chainId);
-    if (!client) {
-      throw new Error(`No Alchemy client available for chain ${chainId}`);
-    }
-
-    try {
-      const balance = await client.core.getBalance(address);
-      return balance;
-    } catch (error) {
-      console.error(`Error fetching native balance for ${address} on chain ${chainId}:`, error);
-      throw error;
-    }
+    return await providerService.executeWithFallback(
+      chainId,
+      async (client) => await client.core.getBalance(address),
+      `getNativeBalance(${address}, ${chainId})`
+    );
   }
 
   // Gas Manager / Sponsorship methods - Integrated with gasless.cash

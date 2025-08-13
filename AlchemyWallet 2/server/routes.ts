@@ -5,12 +5,28 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { alchemyService, SUPPORTED_CHAINS } from "./services/alchemyService";
 import { gaslessCashService } from "./services/gaslessCashService";
 import { monitoringService } from "./services/monitoringService";
+import { securityService } from "./services/securityService";
+import { gasOptimizationService } from "./services/gasOptimizationService";
+import { crossNetworkService } from "./services/crossNetworkService";
+import { providerService } from "./services/providerService";
 import { insertAssetSchema, insertTransactionSchema, insertGasPolicySchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // Security headers and CORS
+  app.use(securityService.securityHeaders());
+
+  // Input validation and sanitization
+  app.use(securityService.validateInput());
+
+  // Rate limiting for different endpoint types
+  app.use('/api/auth', securityService.createRateLimiter('auth'));
+  app.use('/api/transactions/gasless', securityService.createRateLimiter('gasless'));
+  app.use('/api/transactions', securityService.createRateLimiter('transaction'));
+  app.use('/api', securityService.createRateLimiter('api'));
 
   // Performance monitoring middleware
   app.use((req: any, res, next) => {
@@ -31,19 +47,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Security monitoring middleware
+  // Security monitoring middleware (enhanced)
   app.use((req: any, res, next) => {
-    // Rate limiting check (basic implementation)
     const clientIp = req.ip || req.connection.remoteAddress;
     
-    // Log suspicious patterns
-    if (req.path.includes('..') || req.path.includes('<script>')) {
-      monitoringService.logSecurityEvent({
-        type: 'suspicious_transaction',
-        ipAddress: clientIp,
-        details: { path: req.path, userAgent: req.headers['user-agent'] },
-        severity: 'medium',
-      });
+    // Enhanced suspicious pattern detection
+    const suspiciousPatterns = [
+      /\.\.\/|\.\.\\/, // Path traversal
+      /<script[^>]*>|javascript:/i, // XSS attempts
+      /union\s+select|drop\s+table/i, // SQL injection
+      /exec\(|eval\(/i, // Code execution
+    ];
+
+    const checkString = `${req.path}${JSON.stringify(req.query)}${JSON.stringify(req.body)}`;
+    
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(checkString)) {
+        monitoringService.logSecurityEvent({
+          type: 'suspicious_transaction',
+          ipAddress: clientIp,
+          details: { 
+            path: req.path, 
+            userAgent: req.headers['user-agent'],
+            pattern: pattern.source,
+            data: checkString.substring(0, 100),
+          },
+          severity: 'high',
+        });
+        
+        return res.status(400).json({ message: 'Invalid request detected' });
+      }
     }
     
     next();
@@ -227,8 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Gasless transaction routes - Enhanced with gasless.cash integration
-  app.post('/api/transactions/gasless', isAuthenticated, async (req: any, res) => {
+  // Gasless transaction routes - Enhanced with gasless.cash integration and reentrancy protection
+  app.post('/api/transactions/gasless', isAuthenticated, securityService.reentrancyGuard(), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { to, value, data, chainId, walletId } = req.body;
@@ -237,6 +270,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required transaction parameters" });
       }
 
+      // Enhanced gas optimization
+      const gasEstimate = await gasOptimizationService.getOptimizedGasEstimate(
+        chainId,
+        { to, value, data },
+        req.body.urgency || 'medium'
+      );
+
       // Check if chain is supported by gasless.cash
       if (!gaslessCashService.isChainSupported(chainId)) {
         return res.status(400).json({ 
@@ -244,6 +284,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           supportedChains: [1, 56, 137, 8453, 42161]
         });
       }
+
+      // Get optimization strategies
+      const optimizationStrategies = gasOptimizationService.analyzeOptimizationStrategies(
+        { to, value, data },
+        chainId
+      );
 
       // Get quote from gasless.cash
       const quote = await gaslessCashService.getGaslessQuote({
@@ -268,7 +314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ 
           message: "Gas sponsorship not available",
           reason: "Monthly limit exceeded or insufficient budget",
-          remainingBudget: quote.remainingBudget
+          remainingBudget: quote.remainingBudget,
+          optimizationStrategies,
         });
       }
 
@@ -291,7 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       monitoringService.startTransactionTracking({
         hash: sponsoredTx.transactionHash!,
         chainId,
-        gasEstimate: quote.quotedGasLimit,
+        gasEstimate: gasEstimate.gasLimit,
         sponsored: true,
       });
 
@@ -310,6 +357,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sponsored: true, 
           gaslessCash: true,
           quote,
+          gasEstimate,
+          optimizationStrategies,
           sponsorshipCost: sponsoredTx.sponsorshipCost
         },
       });
@@ -321,6 +370,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transaction,
         hash: sponsoredTx.transactionHash,
         sponsored: true,
+        gasEstimate,
+        optimizationStrategies,
         estimatedCost: quote.estimatedCost,
         sponsorshipCost: sponsoredTx.sponsorshipCost,
         service: 'gasless.cash'
@@ -438,6 +489,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const timeframe = req.query.timeframe ? parseInt(req.query.timeframe as string) : undefined;
     const stats = monitoringService.getApiPerformanceStats(timeframe);
     res.json(stats);
+  });
+
+  // New enhanced endpoints
+
+  // Cross-network support
+  app.get('/api/networks', (req, res) => {
+    const networks = crossNetworkService.getSupportedNetworks();
+    res.json(networks);
+  });
+
+  app.get('/api/networks/health', async (req, res) => {
+    try {
+      const health = await crossNetworkService.getNetworkHealth();
+      res.json(health);
+    } catch (error) {
+      console.error('Error getting network health:', error);
+      res.status(500).json({ message: 'Failed to get network health' });
+    }
+  });
+
+  app.get('/api/balances/unified', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const networkId = req.query.networkId;
+      
+      // Get user's wallets first
+      const wallets = await storage.getSmartWallets(userId);
+      const allBalances = [];
+
+      for (const wallet of wallets) {
+        try {
+          const balances = await crossNetworkService.getUnifiedBalance(
+            wallet.address, 
+            networkId || wallet.chainId
+          );
+          allBalances.push(...balances);
+        } catch (error) {
+          console.error(`Error getting unified balance for wallet ${wallet.address}:`, error);
+        }
+      }
+
+      res.json(allBalances);
+    } catch (error) {
+      console.error('Error getting unified balances:', error);
+      res.status(500).json({ message: 'Failed to get unified balances' });
+    }
+  });
+
+  app.post('/api/transactions/unified', isAuthenticated, async (req: any, res) => {
+    try {
+      const { transaction, networkId } = req.body;
+      
+      if (!transaction || !networkId) {
+        return res.status(400).json({ message: 'Transaction and networkId are required' });
+      }
+
+      const txHash = await crossNetworkService.sendUnifiedTransaction(transaction, networkId);
+      res.json({ hash: txHash, networkId });
+    } catch (error) {
+      console.error('Error sending unified transaction:', error);
+      res.status(500).json({ message: 'Failed to send unified transaction' });
+    }
+  });
+
+  app.post('/api/transactions/estimate-fees', async (req, res) => {
+    try {
+      const { transaction, networkId } = req.body;
+      
+      if (!transaction || !networkId) {
+        return res.status(400).json({ message: 'Transaction and networkId are required' });
+      }
+
+      const fees = await crossNetworkService.estimateUnifiedFees(transaction, networkId);
+      res.json(fees);
+    } catch (error) {
+      console.error('Error estimating fees:', error);
+      res.status(500).json({ message: 'Failed to estimate fees' });
+    }
+  });
+
+  // Gas optimization endpoints
+  app.post('/api/gas/optimize', isAuthenticated, async (req: any, res) => {
+    try {
+      const { transaction, chainId, urgency = 'medium' } = req.body;
+      
+      if (!transaction || !chainId) {
+        return res.status(400).json({ message: 'Transaction and chainId are required' });
+      }
+
+      const gasEstimate = await gasOptimizationService.getOptimizedGasEstimate(
+        chainId, 
+        transaction, 
+        urgency
+      );
+      
+      const strategies = gasOptimizationService.analyzeOptimizationStrategies(transaction, chainId);
+      
+      res.json({
+        gasEstimate,
+        optimizationStrategies: strategies,
+      });
+    } catch (error) {
+      console.error('Error optimizing gas:', error);
+      res.status(500).json({ message: 'Failed to optimize gas' });
+    }
+  });
+
+  app.get('/api/gas/analytics', isAuthenticated, (req, res) => {
+    try {
+      const chainId = parseInt(req.query.chainId as string);
+      const timeframe = req.query.timeframe ? parseInt(req.query.timeframe as string) : undefined;
+      
+      if (!chainId) {
+        return res.status(400).json({ message: 'chainId is required' });
+      }
+
+      const analytics = gasOptimizationService.getGasAnalytics(chainId, timeframe);
+      res.json(analytics);
+    } catch (error) {
+      console.error('Error getting gas analytics:', error);
+      res.status(500).json({ message: 'Failed to get gas analytics' });
+    }
+  });
+
+  app.get('/api/gas/optimize-ongoing/:txHash', isAuthenticated, async (req, res) => {
+    try {
+      const { txHash } = req.params;
+      const chainId = parseInt(req.query.chainId as string);
+      
+      if (!chainId) {
+        return res.status(400).json({ message: 'chainId is required' });
+      }
+
+      const optimization = await gasOptimizationService.optimizeOngoingTransaction(txHash, chainId);
+      res.json(optimization);
+    } catch (error) {
+      console.error('Error optimizing ongoing transaction:', error);
+      res.status(500).json({ message: 'Failed to optimize ongoing transaction' });
+    }
+  });
+
+  // Provider health and fallback status
+  app.get('/api/providers/health', isAuthenticated, (req, res) => {
+    try {
+      const chainId = req.query.chainId ? parseInt(req.query.chainId as string) : undefined;
+      const health = providerService.getProviderHealth(chainId);
+      res.json(health);
+    } catch (error) {
+      console.error('Error getting provider health:', error);
+      res.status(500).json({ message: 'Failed to get provider health' });
+    }
+  });
+
+  // Security endpoints
+  app.get('/api/security/stats', isAuthenticated, (req, res) => {
+    try {
+      const stats = securityService.getSecurityStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error getting security stats:', error);
+      res.status(500).json({ message: 'Failed to get security stats' });
+    }
+  });
+
+  app.post('/api/security/validate-address', (req, res) => {
+    try {
+      const { address, networkId } = req.body;
+      
+      if (!address || !networkId) {
+        return res.status(400).json({ message: 'Address and networkId are required' });
+      }
+
+      const isValid = crossNetworkService.validateAddressForNetwork(address, networkId);
+      res.json({ valid: isValid });
+    } catch (error) {
+      console.error('Error validating address:', error);
+      res.status(500).json({ message: 'Failed to validate address' });
+    }
+  });
+
+  // Enhanced health check with comprehensive status
+  app.get('/api/health', (req, res) => {
+    const healthStatus = monitoringService.getHealthStatus();
+    const securityStats = securityService.getSecurityStats();
+    
+    const enhancedHealth = {
+      ...healthStatus,
+      security: securityStats,
+      providers: providerService.getProviderHealth(),
+    };
+    
+    res.status(healthStatus.status === 'healthy' ? 200 : 503).json(enhancedHealth);
   });
 
   const httpServer = createServer(app);
