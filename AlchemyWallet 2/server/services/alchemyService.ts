@@ -158,7 +158,7 @@ class AlchemyService {
     
     // Mock implementation
     return {
-      hash: '0x' + Math.random().toString(16).substr(2, 64),
+      hash: '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join(''),
       sponsored: true,
       chainId,
     };

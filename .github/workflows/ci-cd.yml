@@ -50,37 +50,11 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Comment PR with coverage
-      if: github.event_name == 'pull_request'
-      uses: marocchino/sticky-pull-request-comment@v2
-      with:
-        recreate: true
-        path: ./AlchemyWallet 2/coverage/coverage-summary.txt
     - name: Generate coverage summary markdown
       run: |
         cd "AlchemyWallet 2"
-        npx nyc report --reporter=text-summary > coverage/coverage-summary.md
-    - name: Generate coverage summary markdown
-      run: |
-        cd "AlchemyWallet 2"
-        npx nyc report --reporter=text-summary > coverage/coverage-summary.md
-    - name: Generate coverage summary markdown
-      run: |
-        cd "AlchemyWallet 2"
-        npx nyc report --reporter=text-summary > coverage/coverage-summary.md
+        npx jest --coverage --silent | grep -E "^(Statements|Branches|Functions|Lines)" > coverage/coverage-summary.md || echo "Coverage summary not available" > coverage/coverage-summary.md
 
-    - name: Comment PR with coverage
-      if: github.event_name == 'pull_request'
-      uses: marocchino/sticky-pull-request-comment@v2
-      with:
-        recreate: true
-        path: ./AlchemyWallet 2/coverage/coverage-summary.md
-    - name: Comment PR with coverage
-      if: github.event_name == 'pull_request'
-      uses: marocchino/sticky-pull-request-comment@v2
-      with:
-        recreate: true
-        path: ./AlchemyWallet 2/coverage/coverage-summary.md
     - name: Comment PR with coverage
       if: github.event_name == 'pull_request'
       uses: marocchino/sticky-pull-request-comment@v2
