@@ -421,7 +421,9 @@ class EVMAdapter implements NetworkAdapter {
     try {
       const chainId = 1; // Default to Ethereum
       const tx = await createAlchemyService().getTransaction(hash, chainId);
-      const receipt = await createAlchemyService().getTransactionReceipt(hash, chainId);
+      const alchemyService = createAlchemyService();
+      const tx = await alchemyService.getTransaction(hash, chainId);
+      const receipt = await alchemyService.getTransactionReceipt(hash, chainId);
 
       if (!tx) return null;
 
