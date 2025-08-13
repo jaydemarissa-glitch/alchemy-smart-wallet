@@ -29,6 +29,11 @@ export class AlchemyService {
   private initializeClients() {
     Object.entries(SUPPORTED_CHAINS).forEach(([chainId, config]) => {
       if (config.network && this.apiKey) {
+        // Note: Alchemy SDK v3.6.2+ supports additional configuration options like:
+        // - maxRetries: number (defaults to 5)
+        // - requestTimeout: number (defaults to 0 - no timeout)
+        // - batchRequests: boolean (defaults to false)
+        // These can be added to the constructor if needed for specific use cases
         const alchemy = new Alchemy({
           apiKey: this.apiKey,
           network: config.network,
