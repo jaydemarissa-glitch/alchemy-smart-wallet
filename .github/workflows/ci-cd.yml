@@ -60,7 +60,17 @@ jobs:
       run: |
         cd "AlchemyWallet 2"
         npx nyc report --reporter=text-summary > coverage/coverage-summary.md
+    - name: Generate coverage summary markdown
+      run: |
+        cd "AlchemyWallet 2"
+        npx nyc report --reporter=text-summary > coverage/coverage-summary.md
 
+    - name: Comment PR with coverage
+      if: github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        recreate: true
+        path: ./AlchemyWallet 2/coverage/coverage-summary.md
     - name: Comment PR with coverage
       if: github.event_name == 'pull_request'
       uses: marocchino/sticky-pull-request-comment@v2
