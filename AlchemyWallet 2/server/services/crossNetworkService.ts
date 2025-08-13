@@ -392,7 +392,9 @@ class EVMAdapter implements NetworkAdapter {
     
     try {
       const nativeBalance = await createAlchemyService().getNativeBalance(address, chainId);
-      const tokenBalances = await createAlchemyService().getTokenBalances(address, chainId);
+      const alchemyService = createAlchemyService();
+      const nativeBalance = await alchemyService.getNativeBalance(address, chainId);
+      const tokenBalances = await alchemyService.getTokenBalances(address, chainId);
 
       const tokens = tokenBalances.tokenBalances.map((token: any) => ({
         address: token.contractAddress,
