@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD Pipeline
 
 on:
   push:
@@ -9,29 +9,176 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    defaults:
-      run:
-        working-directory: './AlchemyWallet 2'
-    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: ${{ matrix.node-version }}
         cache: 'npm'
         cache-dependency-path: './AlchemyWallet 2/package-lock.json'
-    
+
     - name: Install dependencies
-      run: npm ci
-    
+      run: |
+        cd "AlchemyWallet 2"
+        npm ci
+
+    - name: Type check
+      run: |
+        cd "AlchemyWallet 2"
+        npm run check
+
     - name: Run tests with coverage
-      run: npm run test:coverage
-    
+      run: |
+        cd "AlchemyWallet 2"
+        npm run test:coverage
+      env:
+        CI: true
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ./AlchemyWallet 2/coverage
+        fail_ci_if_error: false
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
     - name: Comment PR with coverage
       if: github.event_name == 'pull_request'
       uses: marocchino/sticky-pull-request-comment@v2
       with:
+        recreate: true
         path: ./AlchemyWallet 2/coverage/coverage-summary.md
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: './AlchemyWallet 2/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd "AlchemyWallet 2"
+        npm ci
+
+    - name: Run security audit
+      run: |
+        cd "AlchemyWallet 2"
+        npm audit --audit-level high
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: './AlchemyWallet 2/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd "AlchemyWallet 2"
+        npm ci
+
+    - name: Build application
+      run: |
+        cd "AlchemyWallet 2"
+        npm run build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: ./AlchemyWallet 2/dist/
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: staging
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: ./AlchemyWallet 2/dist/
+
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        echo "Build files ready for deployment:"
+        ls -la "./AlchemyWallet 2/dist/"
+        # Add your staging deployment commands here
+        # Examples:
+        # - Deploy to Vercel, Netlify, or other platforms
+        # - Upload to S3 + CloudFront
+        # - Deploy to staging server via SSH
+        # 
+        # Example for Vercel:
+        # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --scope ${{ secrets.VERCEL_ORG_ID }} --confirm
+        #
+        # Example for custom server:
+        # rsync -avz ./AlchemyWallet\ 2/dist/ user@staging-server:/path/to/app/
+        echo "✅ Staging deployment completed!"
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: ./AlchemyWallet 2/dist/
+
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        echo "Build files ready for deployment:"
+        ls -la "./AlchemyWallet 2/dist/"
+        # Add your production deployment commands here
+        # Examples:
+        # - Deploy to Vercel, Netlify, or other platforms
+        # - Upload to S3 + CloudFront
+        # - Deploy to production server via SSH
+        # 
+        # Example for Vercel:
+        # npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --scope ${{ secrets.VERCEL_ORG_ID }} --confirm
+        #
+        # Example for custom server:
+        # rsync -avz ./AlchemyWallet\ 2/dist/ user@production-server:/path/to/app/
+        echo "✅ Production deployment completed!"
+
+    - name: Create deployment notification
+      run: |
+        echo "📢 Production deployment successful!"
+        echo "Version: ${{ github.sha }}"
+        echo "Deployed at: $(date)"
+        # You can add Slack/Discord/email notifications here

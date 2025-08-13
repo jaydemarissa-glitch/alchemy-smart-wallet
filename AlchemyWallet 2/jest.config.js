@@ -1,18 +1,34 @@
+/** @type {import('jest').Config} */
 export default {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/default-esm',
+  extensionsToTreatAsEsm: ['.ts'],
   testEnvironment: 'node',
-  roots: ['<rootDir>/server'],
-  testMatch: ['**/__tests__/**/*.test.ts'],
-  testPathIgnorePatterns: ['/node_modules/', '/tests/'],
-  moduleFileExtensions: ['ts', 'js', 'json'],
-  testTimeout: 10000,
-  collectCoverage: false, // Only collect when explicitly requested
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
-  collectCoverageFrom: [
-    'server/**/*.{ts,js}',
-    '!server/**/*.test.{ts,js}',
-    '!server/**/__tests__/**',
-    '!server/**/node_modules/**',
+  roots: ['<rootDir>/server', '<rootDir>/shared'],
+  testMatch: [
+    '**/__tests__/**/*.test.ts',
+    '**/?(*.)+(spec|test).ts'
   ],
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      useESM: true
+    }],
+  },
+  collectCoverageFrom: [
+    'server/**/*.ts',
+    'shared/**/*.ts',
+    '!server/**/*.d.ts',
+    '!server/**/index.ts',
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: [
+    'text',
+    'lcov',
+    'html',
+    'json-summary'
+  ],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  moduleNameMapping: {
+    '^@shared/(.*)$': '<rootDir>/shared/$1'
+  },
+  testTimeout: 10000
 };

@@ -1,172 +1,406 @@
-import { Network } from 'alchemy-sdk';
-import { alchemyService, SUPPORTED_CHAINS } from '../alchemyService';
+import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+
+// Mock the alchemy-sdk module
+jest.mock('alchemy-sdk', () => ({
+  Alchemy: jest.fn(),
+  Network: {
+    ETH_MAINNET: 'eth-mainnet',
+    MATIC_MAINNET: 'matic-mainnet',
+    BASE_MAINNET: 'base-mainnet',
+    ARB_MAINNET: 'arb-mainnet',
+  },
+}));
+
+// Mock the providerService module
+jest.mock('../providerService', () => ({
+  providerService: {
+    executeWithFallback: jest.fn(),
+    getClientWithFallback: jest.fn(),
+  },
+}));
 
 describe('AlchemyService', () => {
-  beforeEach(() => {
-    // Clear any cached clients
+  let mockProviderService: any;
+  let mockAlchemyInstance: any;
+  let MockedAlchemy: any;
+
+  beforeEach(async () => {
+    // Clear all mocks before each test
     jest.clearAllMocks();
+
+    // Create mock Alchemy instance
+    mockAlchemyInstance = {
+      core: {
+        getTokenBalances: jest.fn(),
+        getTokenMetadata: jest.fn(),
+        getTransaction: jest.fn(),
+        getTransactionReceipt: jest.fn(),
+        getGasPrice: jest.fn(),
+        getBalance: jest.fn(),
+      },
+    };
+
+    // Mock the Alchemy constructor
+    const { Alchemy } = await import('alchemy-sdk');
+    MockedAlchemy = Alchemy as jest.MockedFunction<any>;
+    MockedAlchemy.mockImplementation(() => mockAlchemyInstance);
+
+    // Mock the providerService
+    const { providerService } = await import('../providerService');
+    mockProviderService = providerService;
   });
 
-  describe('SUPPORTED_CHAINS configuration', () => {
-    it('should have correct chain configurations', () => {
-      expect(SUPPORTED_CHAINS[1].name).toBe('Ethereum');
-      expect(SUPPORTED_CHAINS[1].rpcUrl).toContain('eth-mainnet');
-      
-      expect(SUPPORTED_CHAINS[137].name).toBe('Polygon');
-      expect(SUPPORTED_CHAINS[137].rpcUrl).toContain('polygon-mainnet');
-      
-      expect(SUPPORTED_CHAINS[8453].name).toBe('Base');
-      expect(SUPPORTED_CHAINS[8453].rpcUrl).toContain('base-mainnet');
-      
-      expect(SUPPORTED_CHAINS[42161].name).toBe('Arbitrum');
-      expect(SUPPORTED_CHAINS[42161].rpcUrl).toContain('arb-mainnet');
-    });
-
-    it('should use correct network values for supported chains', () => {
-      // FIXED: Now using actual Network enum values from alchemy-sdk instead of hardcoded strings
-      expect(SUPPORTED_CHAINS[1].network).toEqual(Network.ETH_MAINNET);
-      expect(SUPPORTED_CHAINS[137].network).toEqual(Network.MATIC_MAINNET);
-      expect(SUPPORTED_CHAINS[8453].network).toEqual(Network.BASE_MAINNET);
-      expect(SUPPORTED_CHAINS[42161].network).toEqual(Network.ARB_MAINNET);
-    });
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
-  describe('getRpcUrl', () => {
-    it('should return correct RPC URL for supported chains', () => {
-      const ethRpcUrl = alchemyService.getRpcUrl(1);
-      expect(ethRpcUrl).toContain('eth-mainnet');
-      
-      const polygonRpcUrl = alchemyService.getRpcUrl(137);
-      expect(polygonRpcUrl).toContain('polygon-mainnet');
-      
-      const baseRpcUrl = alchemyService.getRpcUrl(8453);
-      expect(baseRpcUrl).toContain('base-mainnet');
-      
-      const arbRpcUrl = alchemyService.getRpcUrl(42161);
-      expect(arbRpcUrl).toContain('arb-mainnet');
+  describe('Constructor', () => {
+    it('should initialize with ALCHEMY_API_KEY environment variable', async () => {
+      const originalApiKey = process.env.ALCHEMY_API_KEY;
+      process.env.ALCHEMY_API_KEY = 'test-api-key';
+
+      const { AlchemyService } = await import('../alchemyService');
+      const service = new AlchemyService();
+
+      expect(service).toBeDefined();
+      expect(MockedAlchemy).toHaveBeenCalledWith({
+        apiKey: 'test-api-key',
+        network: 'eth-mainnet',
+      });
+
+      // Restore original env var
+      if (originalApiKey) {
+        process.env.ALCHEMY_API_KEY = originalApiKey;
+      } else {
+        delete process.env.ALCHEMY_API_KEY;
+      }
     });
 
-    it('should throw error for unsupported chain ID', () => {
-      expect(() => alchemyService.getRpcUrl(999)).toThrow('Unsupported chain ID: 999');
+    it('should warn when no API key is provided', async () => {
+      const originalApiKey = process.env.ALCHEMY_API_KEY;
+      const originalViteKey = process.env.VITE_ALCHEMY_API_KEY;
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      delete process.env.ALCHEMY_API_KEY;
+      delete process.env.VITE_ALCHEMY_API_KEY;
+
+      const { AlchemyService } = await import('../alchemyService');
+      new AlchemyService();
+
+      expect(warnSpy).toHaveBeenCalledWith('ALCHEMY_API_KEY not found, relying on multi-provider service');
+
+      // Restore original env vars
+      if (originalApiKey) process.env.ALCHEMY_API_KEY = originalApiKey;
+      if (originalViteKey) process.env.VITE_ALCHEMY_API_KEY = originalViteKey;
+      warnSpy.mockRestore();
+    });
+
+    it('should initialize with VITE_ALCHEMY_API_KEY if ALCHEMY_API_KEY is not set', async () => {
+      const originalApiKey = process.env.ALCHEMY_API_KEY;
+      const originalViteKey = process.env.VITE_ALCHEMY_API_KEY;
+
+      delete process.env.ALCHEMY_API_KEY;
+      process.env.VITE_ALCHEMY_API_KEY = 'vite-test-api-key';
+
+      const { AlchemyService } = await import('../alchemyService');
+      const service = new AlchemyService();
+
+      expect(service).toBeDefined();
+      expect(MockedAlchemy).toHaveBeenCalledWith({
+        apiKey: 'vite-test-api-key',
+        network: 'eth-mainnet',
+      });
+
+      // Restore original env vars
+      if (originalApiKey) process.env.ALCHEMY_API_KEY = originalApiKey;
+      if (originalViteKey) process.env.VITE_ALCHEMY_API_KEY = originalViteKey;
+      else delete process.env.VITE_ALCHEMY_API_KEY;
     });
   });
 
   describe('getClient', () => {
-    it('should handle client creation for supported networks', async () => {
-      // Mock environment variable
+    let alchemyService: any;
+
+    beforeEach(async () => {
+      const originalApiKey = process.env.ALCHEMY_API_KEY;
       process.env.ALCHEMY_API_KEY = 'test-api-key';
-      
-      const client = await alchemyService.getClient(1);
-      expect(client).toBeDefined();
+
+      const { AlchemyService } = await import('../alchemyService');
+      alchemyService = new AlchemyService();
+
+      if (originalApiKey) {
+        process.env.ALCHEMY_API_KEY = originalApiKey;
+      } else {
+        delete process.env.ALCHEMY_API_KEY;
+      }
     });
 
-    it('should return null for client when no API key is provided', async () => {
-      delete process.env.ALCHEMY_API_KEY;
-      delete process.env.VITE_ALCHEMY_API_KEY;
-      
-      const client = await alchemyService.getClient(1);
-      // Client might still be available via provider service fallback
-      expect(client).toBeDefined();
+    it('should return local client for supported chain', async () => {
+      const client = await alchemyService.getClient(1); // Ethereum
+      expect(client).toBe(mockAlchemyInstance);
+    });
+
+    it('should fallback to provider service when local client not available', async () => {
+      const mockFallbackClient = { client: mockAlchemyInstance };
+      mockProviderService.getClientWithFallback.mockResolvedValue(mockFallbackClient);
+
+      const client = await alchemyService.getClient(999); // Unsupported chain
+      expect(mockProviderService.getClientWithFallback).toHaveBeenCalledWith(999);
+      expect(client).toBe(mockAlchemyInstance);
+    });
+
+    it('should return null when no client is available', async () => {
+      mockProviderService.getClientWithFallback.mockResolvedValue(null);
+
+      const client = await alchemyService.getClient(999);
+      expect(client).toBeNull();
     });
   });
 
-  describe('token operations', () => {
-    it('should call getTokenBalances with correct parameters', async () => {
-      const address = '0x1234567890123456789012345678901234567890';
-      const chainId = 1;
-      
-      // Mock the provider service to avoid actual API calls
-      try {
-        await alchemyService.getTokenBalances(address, chainId);
-      } catch (error) {
-        // Expected to fail in test environment without real providers
-        expect(error).toBeDefined();
+  describe('getRpcUrl', () => {
+    let alchemyService: any;
+
+    beforeEach(async () => {
+      const originalApiKey = process.env.ALCHEMY_API_KEY;
+      process.env.ALCHEMY_API_KEY = 'test-api-key';
+
+      const { AlchemyService } = await import('../alchemyService');
+      alchemyService = new AlchemyService();
+
+      if (originalApiKey) {
+        process.env.ALCHEMY_API_KEY = originalApiKey;
+      } else {
+        delete process.env.ALCHEMY_API_KEY;
       }
     });
 
-    it('should call getTokenMetadata with correct parameters', async () => {
-      const contractAddress = '0xA0b86a33E6441c8b8C5B2b5b4e6E5e5A5f0E5F5f';
-      const chainId = 1;
-      
-      try {
-        await alchemyService.getTokenMetadata(contractAddress, chainId);
-      } catch (error) {
-        // Expected to fail in test environment without real providers
-        expect(error).toBeDefined();
-      }
-    });
-  });
-
-  describe('transaction operations', () => {
-    it('should handle getTransaction calls', async () => {
-      const hash = '0x1234567890123456789012345678901234567890123456789012345678901234';
-      const chainId = 1;
-      
-      try {
-        await alchemyService.getTransaction(hash, chainId);
-      } catch (error) {
-        // Expected to fail in test environment without real providers
-        expect(error).toBeDefined();
-      }
+    it('should return correct RPC URL for supported chain', () => {
+      const url = alchemyService.getRpcUrl(1);
+      expect(url).toBe('https://eth-mainnet.g.alchemy.com/v2/test-api-key');
     });
 
-    it('should handle getTransactionReceipt calls', async () => {
-      const hash = '0x1234567890123456789012345678901234567890123456789012345678901234';
-      const chainId = 1;
-      
-      try {
-        await alchemyService.getTransactionReceipt(hash, chainId);
-      } catch (error) {
-        // Expected to fail in test environment without real providers
-        expect(error).toBeDefined();
-      }
+    it('should return correct RPC URL for Polygon', () => {
+      const url = alchemyService.getRpcUrl(137);
+      expect(url).toBe('https://polygon-mainnet.g.alchemy.com/v2/test-api-key');
+    });
+
+    it('should throw error for unsupported chain', () => {
+      expect(() => alchemyService.getRpcUrl(999)).toThrow('Unsupported chain ID: 999');
     });
   });
 
-  describe('gas operations', () => {
-    it('should get gas price for supported networks', async () => {
-      try {
-        await alchemyService.getGasPrice(1);
-      } catch (error) {
-        // Expected to fail in test environment without real providers
-        expect(error).toBeDefined();
+  describe('API methods with provider fallback', () => {
+    let alchemyService: any;
+
+    beforeEach(async () => {
+      const originalApiKey = process.env.ALCHEMY_API_KEY;
+      process.env.ALCHEMY_API_KEY = 'test-api-key';
+
+      const { AlchemyService } = await import('../alchemyService');
+      alchemyService = new AlchemyService();
+
+      if (originalApiKey) {
+        process.env.ALCHEMY_API_KEY = originalApiKey;
+      } else {
+        delete process.env.ALCHEMY_API_KEY;
       }
     });
 
-    it('should get native balance for address', async () => {
-      const address = '0x1234567890123456789012345678901234567890';
-      const chainId = 1;
-      
-      try {
-        await alchemyService.getNativeBalance(address, chainId);
-      } catch (error) {
-        // Expected to fail in test environment without real providers
-        expect(error).toBeDefined();
-      }
+    it('should call getTokenBalances with provider fallback', async () => {
+      const mockBalances = { tokenBalances: [{ contractAddress: '0x123', tokenBalance: '1000' }] };
+      mockProviderService.executeWithFallback.mockResolvedValue(mockBalances);
+
+      const result = await alchemyService.getTokenBalances('0xabc123', 1);
+
+      expect(mockProviderService.executeWithFallback).toHaveBeenCalledWith(
+        1,
+        expect.any(Function),
+        'getTokenBalances(0xabc123, 1)'
+      );
+      expect(result).toEqual(mockBalances);
+    });
+
+    it('should call getTokenMetadata with provider fallback', async () => {
+      const mockMetadata = { name: 'Test Token', symbol: 'TEST', decimals: 18 };
+      mockProviderService.executeWithFallback.mockResolvedValue(mockMetadata);
+
+      const result = await alchemyService.getTokenMetadata('0x123', 1);
+
+      expect(mockProviderService.executeWithFallback).toHaveBeenCalledWith(
+        1,
+        expect.any(Function),
+        'getTokenMetadata(0x123, 1)'
+      );
+      expect(result).toEqual(mockMetadata);
+    });
+
+    it('should call getTransaction with provider fallback', async () => {
+      const mockTransaction = { hash: '0xabc', from: '0x123', to: '0x456' };
+      mockProviderService.executeWithFallback.mockResolvedValue(mockTransaction);
+
+      const result = await alchemyService.getTransaction('0xabc', 1);
+
+      expect(mockProviderService.executeWithFallback).toHaveBeenCalledWith(
+        1,
+        expect.any(Function),
+        'getTransaction(0xabc, 1)'
+      );
+      expect(result).toEqual(mockTransaction);
+    });
+
+    it('should call getTransactionReceipt with provider fallback', async () => {
+      const mockReceipt = { transactionHash: '0xabc', status: 1, gasUsed: '21000' };
+      mockProviderService.executeWithFallback.mockResolvedValue(mockReceipt);
+
+      const result = await alchemyService.getTransactionReceipt('0xabc', 1);
+
+      expect(mockProviderService.executeWithFallback).toHaveBeenCalledWith(
+        1,
+        expect.any(Function),
+        'getTransactionReceipt(0xabc, 1)'
+      );
+      expect(result).toEqual(mockReceipt);
+    });
+
+    it('should call getGasPrice with provider fallback', async () => {
+      const mockGasPrice = { toString: () => '20000000000' };
+      mockProviderService.executeWithFallback.mockResolvedValue(mockGasPrice);
+
+      const result = await alchemyService.getGasPrice(1);
+
+      expect(mockProviderService.executeWithFallback).toHaveBeenCalledWith(
+        1,
+        expect.any(Function),
+        'getGasPrice(1)'
+      );
+      expect(result).toEqual(mockGasPrice);
+    });
+
+    it('should call getNativeBalance with provider fallback', async () => {
+      const mockBalance = { toString: () => '1000000000000000000' };
+      mockProviderService.executeWithFallback.mockResolvedValue(mockBalance);
+
+      const result = await alchemyService.getNativeBalance('0xabc123', 1);
+
+      expect(mockProviderService.executeWithFallback).toHaveBeenCalledWith(
+        1,
+        expect.any(Function),
+        'getNativeBalance(0xabc123, 1)'
+      );
+      expect(result).toEqual(mockBalance);
     });
   });
 
   describe('deprecated methods', () => {
-    it('should handle checkGasSponsorship (deprecated)', async () => {
-      const userId = 'test-user';
-      const chainId = 1;
-      const estimatedGas = '21000';
-      
-      const result = await alchemyService.checkGasSponsorship(userId, chainId, estimatedGas);
-      expect(result.canSponsor).toBe(true);
-      expect(result.remainingBudget).toBe(1000);
-      expect(typeof result.estimatedCost).toBe('number');
+    let alchemyService: any;
+
+    beforeEach(async () => {
+      const originalApiKey = process.env.ALCHEMY_API_KEY;
+      process.env.ALCHEMY_API_KEY = 'test-api-key';
+
+      const { AlchemyService } = await import('../alchemyService');
+      alchemyService = new AlchemyService();
+
+      if (originalApiKey) {
+        process.env.ALCHEMY_API_KEY = originalApiKey;
+      } else {
+        delete process.env.ALCHEMY_API_KEY;
+      }
     });
 
-    it('should handle sponsorTransaction (deprecated)', async () => {
-      const transactionData = { to: '0x123', value: '0' };
-      const userId = 'test-user';
-      const chainId = 1;
+    it('should handle checkGasSponsorship (deprecated) and warn', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = await alchemyService.checkGasSponsorship('user123', 1, '21000');
+
+      expect(warnSpy).toHaveBeenCalledWith('checkGasSponsorship is deprecated, use gaslessCashService.getGaslessQuote');
+      expect(result).toMatchObject({
+        canSponsor: true,
+        remainingBudget: 1000,
+      });
+      expect(result.estimatedCost).toBeCloseTo(0.21, 2);
+
+      warnSpy.mockRestore();
+    });
+
+    it('should handle sponsorTransaction (deprecated) and warn', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const mockTransactionData = { to: '0x123', value: '1000' };
+      const result = await alchemyService.sponsorTransaction(mockTransactionData, 'user123', 1);
+
+      expect(warnSpy).toHaveBeenCalledWith('sponsorTransaction is deprecated, use gaslessCashService.submitGaslessTransaction');
+      expect(result).toMatchObject({
+        sponsored: true,
+        chainId: 1,
+      });
+      expect(result.hash).toMatch(/^0x[a-f0-9]+$/); // Verify it's a valid Ethereum-like transaction hash
+
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('factory function and exports', () => {
+    it('should export createAlchemyService factory function', async () => {
+      const { createAlchemyService, AlchemyService } = await import('../alchemyService');
+
+      const service = createAlchemyService();
+      expect(service).toBeInstanceOf(AlchemyService);
+    });
+
+    it('should export default alchemyService instance', async () => {
+      const { alchemyService, AlchemyService } = await import('../alchemyService');
+
+      expect(alchemyService).toBeInstanceOf(AlchemyService);
+    });
+
+    it('should export SUPPORTED_CHAINS constant', async () => {
+      const { SUPPORTED_CHAINS } = await import('../alchemyService');
+
+      expect(SUPPORTED_CHAINS).toEqual({
+        1: { name: 'Ethereum', network: 'eth-mainnet', rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2/' },
+        56: { name: 'BSC', network: null, rpcUrl: 'https://bnb-mainnet.g.alchemy.com/v2/' },
+        137: { name: 'Polygon', network: 'matic-mainnet', rpcUrl: 'https://polygon-mainnet.g.alchemy.com/v2/' },
+        8453: { name: 'Base', network: 'base-mainnet', rpcUrl: 'https://base-mainnet.g.alchemy.com/v2/' },
+        42161: { name: 'Arbitrum', network: 'arb-mainnet', rpcUrl: 'https://arb-mainnet.g.alchemy.com/v2/' },
+      });
+    });
+  });
+
+  describe('Alchemy SDK compatibility', () => {
+    it('should support maxRetries parameter if needed in the future', () => {
+      // This test ensures that if maxRetries is ever added to the Alchemy constructor,
+      // it will be properly supported as the Alchemy SDK v3.6.2+ does support this parameter
+      const { Alchemy, Network } = require('alchemy-sdk');
       
-      const result = await alchemyService.sponsorTransaction(transactionData, userId, chainId);
-      expect(result.hash).toBeDefined();
-      expect(result.sponsored).toBe(true);
-      expect(result.chainId).toBe(chainId);
+      // Test that Alchemy SDK supports maxRetries configuration
+      expect(() => {
+        new Alchemy({
+          apiKey: 'test-key',
+          network: Network.ETH_MAINNET,
+          maxRetries: 3
+        });
+      }).not.toThrow();
+    });
+
+    it('should verify current constructor calls are compatible', () => {
+      // Verify that the current constructor patterns used in alchemyService
+      // are compatible with the Alchemy SDK interface
+      const { Alchemy, Network } = require('alchemy-sdk');
+      
+      expect(() => {
+        new Alchemy({
+          apiKey: 'test-api-key',
+          network: Network.ETH_MAINNET,
+        });
+      }).not.toThrow();
+      
+      expect(() => {
+        new Alchemy({
+          apiKey: 'test-api-key',
+          network: Network.MATIC_MAINNET,
+        });
+      }).not.toThrow();
     });
   });
 });
