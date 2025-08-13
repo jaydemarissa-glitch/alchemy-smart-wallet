@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { alchemyService, SUPPORTED_CHAINS } from "./services/alchemyService";
+import { alchemyService, createAlchemyService, SUPPORTED_CHAINS } from "./services/alchemyService";
 import { gaslessCashService } from "./services/gaslessCashService";
 import { monitoringService } from "./services/monitoringService";
 import { securityService } from "./services/securityService";

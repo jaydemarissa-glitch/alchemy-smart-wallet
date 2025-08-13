@@ -5,7 +5,7 @@
  * including Solana, Cosmos, and other networks.
  */
 
-import { alchemyService } from './alchemyService';
+import { alchemyService, createAlchemyService } from './alchemyService';
 import { monitoringService } from './monitoringService';
 
 // Network types

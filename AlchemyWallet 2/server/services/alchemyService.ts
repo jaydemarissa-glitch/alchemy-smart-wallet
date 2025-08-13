@@ -1,6 +1,12 @@
 import { Alchemy, Network } from 'alchemy-sdk';
 import { providerService } from './providerService';
 
+// Configuration interface for AlchemyService
+export interface AlchemyServiceConfig {
+  apiKey?: string;
+  customEndpoints?: Record<number, string>;
+}
+
 // Chain configurations
 export const SUPPORTED_CHAINS = {
   1: { name: 'Ethereum', network: Network.ETH_MAINNET, rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2/' },
@@ -15,9 +21,11 @@ export type SupportedChainId = keyof typeof SUPPORTED_CHAINS;
 export class AlchemyService {
   private clients: Map<number, Alchemy> = new Map();
   private apiKey: string;
+  private config: AlchemyServiceConfig;
 
-  constructor() {
-    this.apiKey = process.env.ALCHEMY_API_KEY || process.env.VITE_ALCHEMY_API_KEY || '';
+  constructor(config: AlchemyServiceConfig = {}) {
+    this.config = config;
+    this.apiKey = config.apiKey || process.env.ALCHEMY_API_KEY || process.env.VITE_ALCHEMY_API_KEY || '';
     
     if (!this.apiKey) {
       console.warn('ALCHEMY_API_KEY not found, relying on multi-provider service');
@@ -139,10 +147,12 @@ export class AlchemyService {
 
 /**
  * Factory function to create a new instance of AlchemyService
- * Useful for testing or when you need isolated instances
+ * @param config Optional configuration parameters
+ * @returns A new AlchemyService instance
  */
-export function createAlchemyService(): AlchemyService {
-  return new AlchemyService();
+export function createAlchemyService(config: AlchemyServiceConfig = {}): AlchemyService {
+  return new AlchemyService(config);
 }
 
-export const alchemyService = new AlchemyService();
+// For backward compatibility, export a default instance
+export const alchemyService = createAlchemyService();

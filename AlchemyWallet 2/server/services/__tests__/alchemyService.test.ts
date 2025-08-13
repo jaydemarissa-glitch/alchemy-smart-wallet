@@ -1,4 +1,6 @@
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { Network } from 'alchemy-sdk';
+import { alchemyService, createAlchemyService, AlchemyServiceConfig, SUPPORTED_CHAINS } from '../alchemyService';
 
 // Mock the alchemy-sdk module
 jest.mock('alchemy-sdk', () => ({
@@ -48,6 +50,79 @@ describe('AlchemyService', () => {
     // Mock the providerService
     const { providerService } = await import('../providerService');
     mockProviderService = providerService;
+  });
+
+  describe('Factory Function', () => {
+    it('should create a new instance each time createAlchemyService is called', () => {
+      const instance1 = createAlchemyService();
+      const instance2 = createAlchemyService();
+      
+      expect(instance1).not.toBe(instance2);
+      expect(instance1).toBeInstanceOf(Object);
+      expect(instance2).toBeInstanceOf(Object);
+    });
+
+    it('should accept configuration parameters', () => {
+      const customApiKey = 'custom-test-api-key';
+      const config: AlchemyServiceConfig = {
+        apiKey: customApiKey,
+      };
+      
+      const instance = createAlchemyService(config);
+      expect(instance).toBeDefined();
+      
+      // Test that the custom API key is used in RPC URLs
+      const rpcUrl = instance.getRpcUrl(1);
+      expect(rpcUrl).toContain(customApiKey);
+    });
+
+    it('should create instances with different configurations', () => {
+      const config1: AlchemyServiceConfig = { apiKey: 'api-key-1' };
+      const config2: AlchemyServiceConfig = { apiKey: 'api-key-2' };
+      
+      const instance1 = createAlchemyService(config1);
+      const instance2 = createAlchemyService(config2);
+      
+      expect(instance1).not.toBe(instance2);
+      expect(instance1.getRpcUrl(1)).toContain('api-key-1');
+      expect(instance2.getRpcUrl(1)).toContain('api-key-2');
+    });
+
+    it('should work without configuration parameters', () => {
+      const instance = createAlchemyService();
+      expect(instance).toBeDefined();
+      expect(() => instance.getRpcUrl(1)).not.toThrow();
+    });
+
+    it('should maintain backward compatibility with default instance', () => {
+      expect(alchemyService).toBeDefined();
+      expect(typeof alchemyService.getRpcUrl).toBe('function');
+      expect(typeof alchemyService.getTokenBalances).toBe('function');
+    });
+  });
+
+  describe('SUPPORTED_CHAINS configuration', () => {
+    it('should have correct chain configurations', () => {
+      expect(SUPPORTED_CHAINS[1].name).toBe('Ethereum');
+      expect(SUPPORTED_CHAINS[1].rpcUrl).toContain('eth-mainnet');
+      
+      expect(SUPPORTED_CHAINS[137].name).toBe('Polygon');
+      expect(SUPPORTED_CHAINS[137].rpcUrl).toContain('polygon-mainnet');
+      
+      expect(SUPPORTED_CHAINS[8453].name).toBe('Base');
+      expect(SUPPORTED_CHAINS[8453].rpcUrl).toContain('base-mainnet');
+      
+      expect(SUPPORTED_CHAINS[42161].name).toBe('Arbitrum');
+      expect(SUPPORTED_CHAINS[42161].rpcUrl).toContain('arb-mainnet');
+    });
+
+    it('should use correct network values for supported chains', () => {
+      // FIXED: Now using actual Network enum values from alchemy-sdk instead of hardcoded strings
+      expect(SUPPORTED_CHAINS[1].network).toEqual(Network.ETH_MAINNET);
+      expect(SUPPORTED_CHAINS[137].network).toEqual(Network.MATIC_MAINNET);
+      expect(SUPPORTED_CHAINS[8453].network).toEqual(Network.BASE_MAINNET);
+      expect(SUPPORTED_CHAINS[42161].network).toEqual(Network.ARB_MAINNET);
+    });
   });
 
   afterEach(() => {
