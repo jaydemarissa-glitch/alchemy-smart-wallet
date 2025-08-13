@@ -1,5 +1,11 @@
 import { Alchemy, Network } from 'alchemy-sdk';
+import memoize from 'memoizee';
 import { providerService } from './providerService';
+
+// Configuration interface for AlchemyService
+export interface AlchemyServiceConfig {
+  apiKey?: string;
+}
 
 // Chain configurations
 export const SUPPORTED_CHAINS = {
@@ -16,8 +22,8 @@ class AlchemyService {
   private clients: Map<number, Alchemy> = new Map();
   private apiKey: string;
 
-  constructor() {
-    this.apiKey = process.env.ALCHEMY_API_KEY || process.env.VITE_ALCHEMY_API_KEY || '';
+  constructor(config?: AlchemyServiceConfig) {
+    this.apiKey = config?.apiKey || process.env.ALCHEMY_API_KEY || process.env.VITE_ALCHEMY_API_KEY || '';
     
     if (!this.apiKey) {
       console.warn('ALCHEMY_API_KEY not found, relying on multi-provider service');
@@ -133,3 +139,6 @@ class AlchemyService {
 }
 
 export const alchemyService = new AlchemyService();
+
+// Memoized factory function for creating AlchemyService instances
+export const createAlchemyService = memoize((config?: AlchemyServiceConfig) => new AlchemyService(config));

@@ -1,5 +1,5 @@
 import { Network } from 'alchemy-sdk';
-import { alchemyService, SUPPORTED_CHAINS } from '../alchemyService';
+import { alchemyService, SUPPORTED_CHAINS, createAlchemyService, AlchemyServiceConfig } from '../alchemyService';
 
 describe('AlchemyService', () => {
   beforeEach(() => {
@@ -167,6 +167,50 @@ describe('AlchemyService', () => {
       expect(result.hash).toBeDefined();
       expect(result.sponsored).toBe(true);
       expect(result.chainId).toBe(chainId);
+    });
+  });
+
+  describe('createAlchemyService factory function', () => {
+    it('should create a new AlchemyService instance without config', () => {
+      const service = createAlchemyService();
+      expect(service).toBeDefined();
+      expect(typeof service.getRpcUrl).toBe('function');
+      expect(typeof service.getTokenBalances).toBe('function');
+    });
+
+    it('should create a new AlchemyService instance with custom config', () => {
+      const config: AlchemyServiceConfig = { apiKey: 'custom-api-key' };
+      const service = createAlchemyService(config);
+      expect(service).toBeDefined();
+      expect(typeof service.getRpcUrl).toBe('function');
+    });
+
+    it('should return the same instance for identical config (memoization)', () => {
+      const config: AlchemyServiceConfig = { apiKey: 'test-key-123' };
+      const service1 = createAlchemyService(config);
+      const service2 = createAlchemyService(config);
+      
+      // Should return the same memoized instance
+      expect(service1).toBe(service2);
+    });
+
+    it('should return different instances for different configs', () => {
+      const config1: AlchemyServiceConfig = { apiKey: 'key-1' };
+      const config2: AlchemyServiceConfig = { apiKey: 'key-2' };
+      
+      const service1 = createAlchemyService(config1);
+      const service2 = createAlchemyService(config2);
+      
+      // Should return different instances for different configs
+      expect(service1).not.toBe(service2);
+    });
+
+    it('should handle undefined config properly', () => {
+      const service1 = createAlchemyService();
+      const service2 = createAlchemyService(undefined);
+      
+      // Should return the same memoized instance for undefined/no config
+      expect(service1).toBe(service2);
     });
   });
 });
