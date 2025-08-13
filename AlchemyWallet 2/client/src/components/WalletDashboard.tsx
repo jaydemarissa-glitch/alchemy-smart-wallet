@@ -67,7 +67,7 @@ export function WalletDashboard() {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-4 lg:p-8">
+    <div className="flex-1 overflow-auto p-4 lg:p-8" data-testid="wallet-dashboard">
       {/* Welcome Section */}
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
