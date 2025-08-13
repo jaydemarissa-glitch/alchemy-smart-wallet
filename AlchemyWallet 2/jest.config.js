@@ -23,10 +23,11 @@ export default {
   coverageReporters: [
     'text',
     'lcov',
-    'html'
+    'html',
+    'json-summary'
   ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  moduleNameMapper: {
+  moduleNameMapping: {
     '^@shared/(.*)$': '<rootDir>/shared/$1'
   },
   testTimeout: 10000
