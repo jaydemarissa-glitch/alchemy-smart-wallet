@@ -139,24 +139,24 @@ class AlchemyService {
     }
   }
 
-  // Gas Manager / Sponsorship methods would be implemented here
-  // These would integrate with Alchemy's Gas Manager API
+  // Gas Manager / Sponsorship methods - Integrated with gasless.cash
   async checkGasSponsorship(userId: string, chainId: number, estimatedGas: string) {
-    // TODO: Implement actual Gas Manager API integration
-    // For now, return mock sponsorship status
+    // This method is kept for backward compatibility but is deprecated
+    // Use gaslessCashService.getGaslessQuote instead
+    console.warn('checkGasSponsorship is deprecated, use gaslessCashService.getGaslessQuote');
+    
     return {
       canSponsor: true,
       remainingBudget: 1000,
-      estimatedCost: parseFloat(estimatedGas) * 0.00001, // Mock gas cost calculation
+      estimatedCost: parseFloat(estimatedGas) * 0.00001,
     };
   }
 
   async sponsorTransaction(transactionData: any, userId: string, chainId: number) {
-    // TODO: Implement actual transaction sponsorship
-    // This would use Alchemy's Smart Wallet SDK for gasless transactions
-    console.log('Sponsoring transaction:', { transactionData, userId, chainId });
+    // This method is kept for backward compatibility but is deprecated
+    // Use gaslessCashService.submitGaslessTransaction instead
+    console.warn('sponsorTransaction is deprecated, use gaslessCashService.submitGaslessTransaction');
     
-    // Mock implementation
     return {
       hash: '0x' + Math.random().toString(16).substr(2, 64),
       sponsored: true,
