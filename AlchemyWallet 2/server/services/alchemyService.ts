@@ -12,7 +12,7 @@ export const SUPPORTED_CHAINS = {
 
 export type SupportedChainId = keyof typeof SUPPORTED_CHAINS;
 
-class AlchemyService {
+export class AlchemyService {
   private clients: Map<number, Alchemy> = new Map();
   private apiKey: string;
 
@@ -130,6 +130,14 @@ class AlchemyService {
       chainId,
     };
   }
+}
+
+/**
+ * Factory function to create a new instance of AlchemyService
+ * Useful for testing or when you need isolated instances
+ */
+export function createAlchemyService(): AlchemyService {
+  return new AlchemyService();
 }
 
 export const alchemyService = new AlchemyService();

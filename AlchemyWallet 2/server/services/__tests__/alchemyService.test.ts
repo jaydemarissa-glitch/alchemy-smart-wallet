@@ -1,5 +1,5 @@
 import { Network } from 'alchemy-sdk';
-import { alchemyService, SUPPORTED_CHAINS } from '../alchemyService';
+import { alchemyService, AlchemyService, createAlchemyService, SUPPORTED_CHAINS } from '../alchemyService';
 
 describe('AlchemyService', () => {
   beforeEach(() => {
@@ -167,6 +167,74 @@ describe('AlchemyService', () => {
       expect(result.hash).toBeDefined();
       expect(result.sponsored).toBe(true);
       expect(result.chainId).toBe(chainId);
+    });
+  });
+
+  describe('Class and Factory Exports', () => {
+    describe('AlchemyService class export', () => {
+      it('should be able to create a new instance using the class', () => {
+        const instance = new AlchemyService();
+        expect(instance).toBeInstanceOf(AlchemyService);
+        expect(instance).not.toBe(alchemyService); // Should be a different instance
+      });
+
+      it('should have all expected methods on the class instance', () => {
+        const instance = new AlchemyService();
+        expect(typeof instance.getClient).toBe('function');
+        expect(typeof instance.getRpcUrl).toBe('function');
+        expect(typeof instance.getTokenBalances).toBe('function');
+        expect(typeof instance.getTokenMetadata).toBe('function');
+        expect(typeof instance.getTransaction).toBe('function');
+        expect(typeof instance.getTransactionReceipt).toBe('function');
+        expect(typeof instance.getGasPrice).toBe('function');
+        expect(typeof instance.getNativeBalance).toBe('function');
+        expect(typeof instance.checkGasSponsorship).toBe('function');
+        expect(typeof instance.sponsorTransaction).toBe('function');
+      });
+    });
+
+    describe('createAlchemyService factory function', () => {
+      it('should create a new instance using the factory function', () => {
+        const instance = createAlchemyService();
+        expect(instance).toBeInstanceOf(AlchemyService);
+        expect(instance).not.toBe(alchemyService); // Should be a different instance
+      });
+
+      it('should create different instances on each call', () => {
+        const instance1 = createAlchemyService();
+        const instance2 = createAlchemyService();
+        expect(instance1).toBeInstanceOf(AlchemyService);
+        expect(instance2).toBeInstanceOf(AlchemyService);
+        expect(instance1).not.toBe(instance2); // Should be different instances
+        expect(instance1).not.toBe(alchemyService); // Should be different from default
+        expect(instance2).not.toBe(alchemyService); // Should be different from default
+      });
+    });
+
+    describe('backward compatibility', () => {
+      it('should maintain the default alchemyService instance', () => {
+        expect(alchemyService).toBeInstanceOf(AlchemyService);
+      });
+
+      it('should maintain the SUPPORTED_CHAINS export', () => {
+        expect(SUPPORTED_CHAINS).toBeDefined();
+        expect(typeof SUPPORTED_CHAINS).toBe('object');
+        expect(SUPPORTED_CHAINS[1]).toBeDefined();
+      });
+    });
+
+    describe('instance isolation', () => {
+      it('should have isolated state between instances', () => {
+        const instance1 = createAlchemyService();
+        const instance2 = createAlchemyService();
+        
+        // Both instances should work independently
+        expect(() => instance1.getRpcUrl(1)).not.toThrow();
+        expect(() => instance2.getRpcUrl(1)).not.toThrow();
+        
+        // Both should return the same result for the same input (same configuration)
+        expect(instance1.getRpcUrl(1)).toBe(instance2.getRpcUrl(1));
+      });
     });
   });
 });
