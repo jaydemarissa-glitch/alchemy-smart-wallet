@@ -171,5 +171,4 @@ export function createAlchemyService(): AlchemyService {
   return new AlchemyService();
 }
 
-export { AlchemyService };
 export const alchemyService = new AlchemyService();

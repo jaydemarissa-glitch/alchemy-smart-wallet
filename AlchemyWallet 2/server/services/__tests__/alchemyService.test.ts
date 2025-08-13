@@ -507,11 +507,7 @@ describe('AlchemyService', () => {
       
       await alchemyService.sponsorTransaction(mockTransactionData, 'user123', 1);
       
-      expect(consoleSpy).toHaveBeenCalledWith('Sponsoring transaction:', {
-        transactionData: mockTransactionData,
-        userId: 'user123',
-        chainId: 1,
-      });
+      expect(consoleSpy).toHaveBeenCalledWith('Sponsoring transaction for user user123 on chain 1:', mockTransactionData);
       
       consoleSpy.mockRestore();
     });
