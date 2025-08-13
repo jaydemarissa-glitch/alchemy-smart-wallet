@@ -391,7 +391,6 @@ class EVMAdapter implements NetworkAdapter {
     const chainId = 1; // Default to Ethereum for this example
     
     try {
-      const nativeBalance = await createAlchemyService().getNativeBalance(address, chainId);
       const alchemyService = createAlchemyService();
       const nativeBalance = await alchemyService.getNativeBalance(address, chainId);
       const tokenBalances = await alchemyService.getTokenBalances(address, chainId);
@@ -420,7 +419,6 @@ class EVMAdapter implements NetworkAdapter {
   async getTransaction(hash: string): Promise<UnifiedTransaction | null> {
     try {
       const chainId = 1; // Default to Ethereum
-      const tx = await createAlchemyService().getTransaction(hash, chainId);
       const alchemyService = createAlchemyService();
       const tx = await alchemyService.getTransaction(hash, chainId);
       const receipt = await alchemyService.getTransactionReceipt(hash, chainId);
