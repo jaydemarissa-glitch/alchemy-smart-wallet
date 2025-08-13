@@ -43,11 +43,6 @@ jobs:
         echo "## Coverage Report" > coverage-summary.md
         echo "Coverage data generated at $(date)" >> coverage-summary.md
         
-    - name: Generate coverage summary markdown
-      run: |
-        echo "## Coverage Report" > coverage-summary.md
-        echo "Coverage data generated at $(date)" >> coverage-summary.md
-        
     - name: Archive coverage results
       uses: actions/upload-artifact@v3
       with:
@@ -86,56 +81,15 @@ jobs:
             body: 'Coverage report generated'
           });
           
-    - name: Comment PR with coverage
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: 'Coverage report generated'
-          });
-          
-    - name: Comment PR with coverage
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: 'Coverage report generated'
-          });
-          
-    - name: Generate coverage summary markdown
-      run: |
-        echo "## Coverage Report" > coverage-summary.md
-        echo "Coverage data generated at $(date)" >> coverage-summary.md
-        
     - name: Deploy to production
       if: github.ref == 'refs/heads/main'
       run: |
         echo "Deploying to production environment"
-          
-    # Generate coverage summary markdown - Second duplicate
-    - name: Generate coverage summary markdown
-      run: |
-        echo "## Coverage Report" > coverage-summary.md
-        echo "Coverage data generated at $(date)" >> coverage-summary.md
         
     - name: Post deployment verification
       if: github.ref == 'refs/heads/main'
       run: |
         echo "Running post-deployment verification"
-        
-    # Generate coverage summary markdown - Third duplicate
-    - name: Generate coverage summary markdown
-      run: |
-        echo "## Coverage Report" > coverage-summary.md
-        echo "Coverage data generated at $(date)" >> coverage-summary.md
         
     - name: Cleanup artifacts
       run: |
