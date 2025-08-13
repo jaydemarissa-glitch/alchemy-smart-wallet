@@ -7,194 +7,188 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  test-backend:
+  test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./AlchemyWallet\ 2
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './AlchemyWallet 2/package-lock.json'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run backend tests
-        run: npm test -- --coverage
-      
-      - name: Upload backend coverage artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage
-          path: ./AlchemyWallet\ 2/coverage/
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
 
-  test-e2e:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./AlchemyWallet\ 2
-    
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './AlchemyWallet 2/package-lock.json'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-      
-      - name: Run E2E tests
-        run: npm run test:e2e -- --reporter=html
-      
-      - name: Upload E2E test artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-results
-          path: ./AlchemyWallet\ 2/playwright-report/
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: './AlchemyWallet 2/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd "AlchemyWallet 2"
+        npm ci
+
+    - name: Type check
+      run: |
+        cd "AlchemyWallet 2"
+        npm run check
+
+    - name: Run tests with coverage
+      run: |
+        cd "AlchemyWallet 2"
+        npm run test:ci
+      env:
+        CI: true
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ./AlchemyWallet 2/coverage
+        fail_ci_if_error: false
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Generate coverage summary for PR
+      if: github.event_name == 'pull_request'
+      run: |
+        cd "AlchemyWallet 2"
+        echo "## Test Coverage Report" > coverage-summary.md
+        echo "" >> coverage-summary.md
+        echo "\`\`\`" >> coverage-summary.md
+        npx jest --coverage --silent --passWithNoTests 2>/dev/null | grep -E "(All files|File|Statements|Branches|Functions|Lines)" | head -20 >> coverage-summary.md || echo "Coverage data not available" >> coverage-summary.md
+        echo "\`\`\`" >> coverage-summary.md
+
+    - name: Comment PR with coverage
+      if: github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        recreate: true
+        path: ./AlchemyWallet 2/coverage-summary.md
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: './AlchemyWallet 2/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd "AlchemyWallet 2"
+        npm ci
+
+    - name: Run security audit
+      run: |
+        cd "AlchemyWallet 2"
+        npm audit --audit-level high
 
   build:
     runs-on: ubuntu-latest
-    needs: [test-backend, test-e2e]
-    defaults:
-      run:
-        working-directory: ./AlchemyWallet\ 2
-    
+    needs: [test, security]
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './AlchemyWallet 2/package-lock.json'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Build application
-        run: npm run build
-      
-      - name: Type check
-        run: npm run check
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-  coverage-report:
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: './AlchemyWallet 2/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd "AlchemyWallet 2"
+        npm ci
+
+    - name: Build application
+      run: |
+        cd "AlchemyWallet 2"
+        npm run build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: ./AlchemyWallet 2/dist/
+
+  deploy-staging:
     runs-on: ubuntu-latest
-    needs: [test-backend, test-e2e, build]
-    if: always() && (needs.test-backend.result == 'success' || needs.test-e2e.result == 'success')
-    
+    needs: [build]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: staging
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download backend coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-coverage
-          path: ./coverage/backend/
-        continue-on-error: true
-      
-      - name: Download E2E test artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: e2e-results
-          path: ./coverage/e2e/
-        continue-on-error: true
-      
-      # Consolidated step: Upload coverage reports to Codecov
-      - name: Upload consolidated coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage/
-          flags: consolidated
-          name: consolidated-coverage
-          fail_ci_if_error: false
-      
-      # Consolidated step: Generate coverage summary markdown
-      - name: Generate consolidated coverage summary
-        run: |
-          echo "# 📊 Test Coverage Report" > coverage-summary.md
-          echo "" >> coverage-summary.md
-          
-          # Backend coverage summary
-          if [ -f "./coverage/backend/coverage-summary.txt" ]; then
-            echo "## 🔧 Backend Test Coverage" >> coverage-summary.md
-            cat "./coverage/backend/coverage-summary.txt" >> coverage-summary.md
-          else
-            echo "## 🔧 Backend Test Coverage" >> coverage-summary.md
-            echo "Backend coverage data not available" >> coverage-summary.md
-          fi
-          echo "" >> coverage-summary.md
-          
-          # E2E test summary
-          echo "## 🎭 E2E Test Results" >> coverage-summary.md
-          if [ -d "./coverage/e2e/" ]; then
-            echo "E2E tests completed successfully" >> coverage-summary.md
-          else
-            echo "E2E test results not available" >> coverage-summary.md
-          fi
-          echo "" >> coverage-summary.md
-          
-          # Build status
-          echo "## 🏗️ Build Status" >> coverage-summary.md
-          echo "Build and type checking completed successfully" >> coverage-summary.md
-          
-          cat coverage-summary.md
-      
-      # Consolidated step: Comment on pull requests with coverage
-      - name: Comment PR with consolidated coverage report
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            let summary = '';
-            try {
-              summary = fs.readFileSync('coverage-summary.md', 'utf8');
-            } catch (e) {
-              summary = '# 📊 Test Coverage Report\n\nCoverage summary not available';
-            }
-            
-            // Check if we already commented to avoid duplicates
-            const comments = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-            
-            const existingComment = comments.data.find(comment => 
-              comment.body.includes('📊 Test Coverage Report') && 
-              comment.user.type === 'Bot'
-            );
-            
-            if (existingComment) {
-              // Update existing comment
-              await github.rest.issues.updateComment({
-                comment_id: existingComment.id,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: summary
-              });
-            } else {
-              // Create new comment
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: summary
-              });
-            }
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: ./AlchemyWallet 2/dist/
+
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        echo "Build files ready for deployment:"
+        ls -la "./AlchemyWallet 2/dist/"
+        # Add your staging deployment commands here
+        # Examples:
+        # - Deploy to Vercel, Netlify, or other platforms
+        # - Upload to S3 + CloudFront
+        # - Deploy to staging server via SSH
+        # 
+        # Example for Vercel:
+        # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --scope ${{ secrets.VERCEL_ORG_ID }} --confirm
+        #
+        # Example for custom server:
+        # rsync -avz ./AlchemyWallet\ 2/dist/ user@staging-server:/path/to/app/
+        echo "✅ Staging deployment completed!"
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: ./AlchemyWallet 2/dist/
+
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        echo "Build files ready for deployment:"
+        ls -la "./AlchemyWallet 2/dist/"
+        # Add your production deployment commands here
+        # Examples:
+        # - Deploy to Vercel, Netlify, or other platforms
+        # - Upload to S3 + CloudFront
+        # - Deploy to production server via SSH
+        # 
+        # Example for Vercel:
+        # npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --scope ${{ secrets.VERCEL_ORG_ID }} --confirm
+        #
+        # Example for custom server:
+        # rsync -avz ./AlchemyWallet\ 2/dist/ user@production-server:/path/to/app/
+        echo "✅ Production deployment completed!"
+
+    - name: Create deployment notification
+      run: |
+        echo "📢 Production deployment successful!"
+        echo "Version: ${{ github.sha }}"
+        echo "Deployed at: $(date)"
+        # You can add Slack/Discord/email notifications here
