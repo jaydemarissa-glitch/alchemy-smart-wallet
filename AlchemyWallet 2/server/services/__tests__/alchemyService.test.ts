@@ -1,10 +1,59 @@
 import { Network } from 'alchemy-sdk';
-import { alchemyService, SUPPORTED_CHAINS } from '../alchemyService';
+import { alchemyService, createAlchemyService, AlchemyServiceConfig, SUPPORTED_CHAINS } from '../alchemyService';
 
 describe('AlchemyService', () => {
   beforeEach(() => {
     // Clear any cached clients
     jest.clearAllMocks();
+  });
+
+  describe('Factory Function', () => {
+    it('should create a new instance each time createAlchemyService is called', () => {
+      const instance1 = createAlchemyService();
+      const instance2 = createAlchemyService();
+      
+      expect(instance1).not.toBe(instance2);
+      expect(instance1).toBeInstanceOf(Object);
+      expect(instance2).toBeInstanceOf(Object);
+    });
+
+    it('should accept configuration parameters', () => {
+      const customApiKey = 'custom-test-api-key';
+      const config: AlchemyServiceConfig = {
+        apiKey: customApiKey,
+      };
+      
+      const instance = createAlchemyService(config);
+      expect(instance).toBeDefined();
+      
+      // Test that the custom API key is used in RPC URLs
+      const rpcUrl = instance.getRpcUrl(1);
+      expect(rpcUrl).toContain(customApiKey);
+    });
+
+    it('should create instances with different configurations', () => {
+      const config1: AlchemyServiceConfig = { apiKey: 'api-key-1' };
+      const config2: AlchemyServiceConfig = { apiKey: 'api-key-2' };
+      
+      const instance1 = createAlchemyService(config1);
+      const instance2 = createAlchemyService(config2);
+      
+      expect(instance1).not.toBe(instance2);
+      expect(instance1.getRpcUrl(1)).toContain('api-key-1');
+      expect(instance2.getRpcUrl(1)).toContain('api-key-2');
+    });
+
+    it('should work without configuration parameters', () => {
+      const instance = createAlchemyService();
+      expect(instance).toBeDefined();
+      expect(() => instance.getRpcUrl(1)).not.toThrow();
+    });
+
+    it('should maintain backward compatibility with default instance', () => {
+      expect(alchemyService).toBeDefined();
+      expect(typeof alchemyService.getRpcUrl).toBe('function');
+      expect(typeof alchemyService.getTokenBalances).toBe('function');
+    });
   });
 
   describe('SUPPORTED_CHAINS configuration', () => {
