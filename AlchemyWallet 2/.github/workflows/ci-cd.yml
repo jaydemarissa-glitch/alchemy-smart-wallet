@@ -258,7 +258,7 @@ jobs:
         run: |
           # Add production smoke tests here
           echo "Running production smoke tests..."
-          curl -f https://alchemy-wallet.example.com/api/health || exit 1
+          curl -f "${{ steps.deploy.outputs.url }}/api/health" || exit 1
 
       - name: 📢 Notify deployment success
         uses: 8398a7/action-slack@v3
