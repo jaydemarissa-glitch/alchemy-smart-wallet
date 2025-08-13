@@ -391,7 +391,9 @@ class EVMAdapter implements NetworkAdapter {
     const chainId = 1; // Default to Ethereum for this example
     
     try {
-      const alchemyService = createAlchemyService();
+      const service = createAlchemyService();
+      const nativeBalance = await service.getNativeBalance(address, chainId);
+      const tokenBalances = await service.getTokenBalances(address, chainId);
       const nativeBalance = await alchemyService.getNativeBalance(address, chainId);
       const tokenBalances = await alchemyService.getTokenBalances(address, chainId);
 
