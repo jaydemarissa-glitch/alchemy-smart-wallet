@@ -29,5 +29,5 @@ export default {
   moduleNameMapper: {
     '^@shared/(.*)$': '<rootDir>/shared/$1'
   },
-  testTimeout: 30000
+  testTimeout: 10000
 };
