@@ -154,7 +154,6 @@ class AlchemyService {
           const alchemy = new Alchemy({
             apiKey: this.apiKey,
             network: config.network,
-            maxRetries: this.config.maxRetries,
           });
           this.clients.set(Number(chainId), alchemy);
           
